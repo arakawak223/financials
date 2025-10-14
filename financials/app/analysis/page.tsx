@@ -34,8 +34,6 @@ export default function AnalysesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
 
-  const supabase = createClient()
-
   useEffect(() => {
     loadAnalyses()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -44,6 +42,7 @@ export default function AnalysesPage() {
   const loadAnalyses = async () => {
     setLoading(true)
     try {
+      const supabase = createClient()
       console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
 
       // 分析データを企業情報と一緒に取得
@@ -72,6 +71,7 @@ export default function AnalysesPage() {
     if (!confirm('この分析を削除してもよろしいですか？')) return
 
     try {
+      const supabase = createClient()
       const { error } = await supabase
         .from('financial_analyses')
         .delete()

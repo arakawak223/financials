@@ -61,7 +61,6 @@ export default function CompaniesPage() {
     description: '',
   })
 
-  const supabase = createClient()
 
   useEffect(() => {
     loadData()
@@ -69,6 +68,7 @@ export default function CompaniesPage() {
   }, [])
 
   const loadData = async () => {
+    const supabase = createClient()
     setLoading(true)
     try {
       // 企業データを取得
@@ -107,6 +107,7 @@ export default function CompaniesPage() {
 
   // 企業関連の関数
   const handleCreateCompany = async () => {
+    const supabase = createClient()
     try {
       const { error } = await supabase
         .from('companies')
@@ -141,6 +142,7 @@ export default function CompaniesPage() {
   }
 
   const handleDeleteCompany = async (id: string) => {
+    const supabase = createClient()
     if (!confirm('この企業を削除してもよろしいですか？')) return
 
     try {
@@ -155,6 +157,7 @@ export default function CompaniesPage() {
 
   // グループ関連の関数
   const handleCreateGroup = async () => {
+    const supabase = createClient()
     try {
       const { error } = await supabase
         .from('company_groups')
@@ -179,6 +182,7 @@ export default function CompaniesPage() {
   }
 
   const handleDeleteGroup = async (id: string) => {
+    const supabase = createClient()
     if (!confirm('このグループを削除してもよろしいですか？')) return
 
     try {
@@ -196,6 +200,7 @@ export default function CompaniesPage() {
 
   // 業種関連の関数
   const handleCreateIndustry = async () => {
+    const supabase = createClient()
     try {
       const { error } = await supabase
         .from('industries')
@@ -220,6 +225,7 @@ export default function CompaniesPage() {
   }
 
   const handleDeleteIndustry = async (id: string) => {
+    const supabase = createClient()
     if (!confirm('この業種を削除してもよろしいですか？')) return
 
     try {
