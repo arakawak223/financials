@@ -91,7 +91,7 @@
 `.env.local` を編集して、実際の値を設定：
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=your-anon-key
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 OPENAI_API_KEY=sk-your-openai-api-key
 NEXT_PUBLIC_OPENAI_API_KEY=sk-your-openai-api-key
 ```
