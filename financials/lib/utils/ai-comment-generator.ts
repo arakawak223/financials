@@ -2,11 +2,20 @@
 import OpenAI from 'openai'
 import type { FinancialAnalysis, AnalysisComment, CommentType } from '../types/financial'
 
-// OpenAI クライアント（環境変数から取得）
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true, // クライアントサイドで使用する場合
-})
+// OpenAI クライアントを取得（遅延初期化）
+function getOpenAIClient(): OpenAI | null {
+  const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY
+
+  if (!apiKey) {
+    console.warn('OpenAI API key is not set. AI comment generation will be skipped.')
+    return null
+  }
+
+  return new OpenAI({
+    apiKey,
+    dangerouslyAllowBrowser: true, // クライアントサイドで使用する場合
+  })
+}
 
 /**
  * 財務分析データからAIコメントを生成
@@ -87,6 +96,11 @@ export async function generateAnalysisComments(
  * 総合評価コメント生成
  */
 async function generateOverallComment(analysis: FinancialAnalysis): Promise<string> {
+  const openai = getOpenAIClient()
+  if (!openai) {
+    return 'OpenAI APIキーが設定されていないため、コメントを生成できませんでした。'
+  }
+
   const latestPeriod = analysis.periods[analysis.periods.length - 1]
   const metrics = latestPeriod.metrics || {}
 
@@ -136,6 +150,9 @@ async function generateOverallComment(analysis: FinancialAnalysis): Promise<stri
  * 流動性コメント生成
  */
 async function generateLiquidityComment(analysis: FinancialAnalysis): Promise<string> {
+  const openai = getOpenAIClient()
+  if (!openai) return '-'
+
   const latestPeriod = analysis.periods[analysis.periods.length - 1]
   const metrics = latestPeriod.metrics || {}
 
@@ -162,6 +179,9 @@ async function generateLiquidityComment(analysis: FinancialAnalysis): Promise<st
  * 収益性コメント生成
  */
 async function generateProfitabilityComment(analysis: FinancialAnalysis): Promise<string> {
+  const openai = getOpenAIClient()
+  if (!openai) return '-'
+
   const latestPeriod = analysis.periods[analysis.periods.length - 1]
   const metrics = latestPeriod.metrics || {}
 
@@ -191,6 +211,9 @@ async function generateProfitabilityComment(analysis: FinancialAnalysis): Promis
  * 効率性コメント生成
  */
 async function generateEfficiencyComment(analysis: FinancialAnalysis): Promise<string> {
+  const openai = getOpenAIClient()
+  if (!openai) return '-'
+
   const latestPeriod = analysis.periods[analysis.periods.length - 1]
   const metrics = latestPeriod.metrics || {}
 
@@ -217,6 +240,9 @@ async function generateEfficiencyComment(analysis: FinancialAnalysis): Promise<s
  * 安全性コメント生成
  */
 async function generateSafetyComment(analysis: FinancialAnalysis): Promise<string> {
+  const openai = getOpenAIClient()
+  if (!openai) return '-'
+
   const latestPeriod = analysis.periods[analysis.periods.length - 1]
   const metrics = latestPeriod.metrics || {}
 
@@ -244,6 +270,9 @@ async function generateSafetyComment(analysis: FinancialAnalysis): Promise<strin
  * 成長性コメント生成
  */
 async function generateGrowthComment(analysis: FinancialAnalysis): Promise<string> {
+  const openai = getOpenAIClient()
+  if (!openai) return '-'
+
   const periods = analysis.periods
   const salesTrend = periods.map((p) => ({
     year: p.fiscalYear,
