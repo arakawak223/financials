@@ -116,18 +116,18 @@ function createMetricsSummarySlide(pptx: pptxgen, analysis: FinancialAnalysis) {
       { text: '指標', options: { bold: true, fill: 'E0E0E0' } },
       { text: `${latestPeriod.fiscalYear}年度`, options: { bold: true, fill: 'E0E0E0' } },
     ],
-    ['NetCash/NetDebt', formatValue(metrics.netCash, '円')],
-    ['流動比率', formatValue(metrics.currentRatio, '%')],
-    ['EBITDA', formatValue(metrics.ebitda, '円')],
-    ['FCF', formatValue(metrics.fcf, '円')],
-    ['売上高成長率', formatValue(metrics.salesGrowthRate, '%')],
-    ['売上総利益率', formatValue(metrics.grossProfitMargin, '%')],
-    ['営業利益率', formatValue(metrics.operatingProfitMargin, '%')],
-    ['ROE', formatValue(metrics.roe, '%')],
-    ['ROA', formatValue(metrics.roa, '%')],
+    [{ text: 'NetCash/NetDebt' }, { text: formatValue(metrics.netCash, '円') }],
+    [{ text: '流動比率' }, { text: formatValue(metrics.currentRatio, '%') }],
+    [{ text: 'EBITDA' }, { text: formatValue(metrics.ebitda, '円') }],
+    [{ text: 'FCF' }, { text: formatValue(metrics.fcf, '円') }],
+    [{ text: '売上高成長率' }, { text: formatValue(metrics.salesGrowthRate, '%') }],
+    [{ text: '売上総利益率' }, { text: formatValue(metrics.grossProfitMargin, '%') }],
+    [{ text: '営業利益率' }, { text: formatValue(metrics.operatingProfitMargin, '%') }],
+    [{ text: 'ROE' }, { text: formatValue(metrics.roe, '%') }],
+    [{ text: 'ROA' }, { text: formatValue(metrics.roa, '%') }],
   ]
 
-  slide.addTable(tableData, {
+  slide.addTable(tableData as any, {
     x: 1.0,
     y: 1.2,
     w: 8.0,
@@ -244,23 +244,23 @@ function createSafetySlide(pptx: pptxgen, analysis: FinancialAnalysis) {
       { text: '評価', options: { bold: true, fill: 'E0E0E0' } },
     ],
     [
-      'NetCash/NetDebt',
-      formatValue(metrics.netCash, '円'),
-      evaluateNetCash(metrics.netCash),
+      { text: 'NetCash/NetDebt' },
+      { text: formatValue(metrics.netCash, '円') },
+      { text: evaluateNetCash(metrics.netCash) },
     ],
     [
-      '流動比率',
-      formatValue(metrics.currentRatio, '%'),
-      evaluateCurrentRatio(metrics.currentRatio),
+      { text: '流動比率' },
+      { text: formatValue(metrics.currentRatio, '%') },
+      { text: evaluateCurrentRatio(metrics.currentRatio) },
     ],
     [
-      'EBITDA対有利子負債比率',
-      formatValue(metrics.ebitdaToInterestBearingDebt, '倍'),
-      evaluateDebtRatio(metrics.ebitdaToInterestBearingDebt),
+      { text: 'EBITDA対有利子負債比率' },
+      { text: formatValue(metrics.ebitdaToInterestBearingDebt, '倍') },
+      { text: evaluateDebtRatio(metrics.ebitdaToInterestBearingDebt) },
     ],
   ]
 
-  slide.addTable(tableData, {
+  slide.addTable(tableData as any, {
     x: 1.5,
     y: 1.5,
     w: 7.0,
@@ -294,36 +294,36 @@ function createAccountDetailsSlide(pptx: pptxgen, analysis: FinancialAnalysis) {
       })),
     ],
     [
-      '現金預金',
-      ...analysis.periods.map((p) =>
-        formatValue(p.balanceSheet.cashAndDeposits, '円')
-      ),
+      { text: '現金預金' },
+      ...analysis.periods.map((p) => ({
+        text: formatValue(p.balanceSheet.cashAndDeposits, '円')
+      })),
     ],
     [
-      '売掛金',
-      ...analysis.periods.map((p) =>
-        formatValue(p.balanceSheet.accountsReceivable, '円')
-      ),
+      { text: '売掛金' },
+      ...analysis.periods.map((p) => ({
+        text: formatValue(p.balanceSheet.accountsReceivable, '円')
+      })),
     ],
     [
-      '棚卸資産',
-      ...analysis.periods.map((p) =>
-        formatValue(p.balanceSheet.inventory, '円')
-      ),
+      { text: '棚卸資産' },
+      ...analysis.periods.map((p) => ({
+        text: formatValue(p.balanceSheet.inventory, '円')
+      })),
     ],
     [
-      '借入金',
-      ...analysis.periods.map((p) =>
-        formatValue(
+      { text: '借入金' },
+      ...analysis.periods.map((p) => ({
+        text: formatValue(
           (p.balanceSheet.shortTermBorrowings || 0) +
             (p.balanceSheet.longTermBorrowings || 0),
           '円'
         )
-      ),
+      })),
     ],
   ]
 
-  slide.addTable(tableData, {
+  slide.addTable(tableData as any, {
     x: 0.8,
     y: 1.2,
     w: 8.4,

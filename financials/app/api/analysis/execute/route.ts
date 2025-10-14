@@ -64,16 +64,25 @@ export async function POST(request: NextRequest) {
     }
 
     // データを変換
-    const periods: PeriodFinancialData[] = periodsData.map((p: any) => ({
+    type PeriodData = {
+      fiscal_year: number
+      period_start_date?: string
+      period_end_date?: string
+      balance_sheet_items?: Array<Record<string, unknown>>
+      profit_loss_items?: Array<Record<string, unknown>>
+      manual_inputs?: Array<{ input_type: string; amount?: number }>
+    }
+
+    const periods: PeriodFinancialData[] = periodsData.map((p: PeriodData) => ({
       fiscalYear: p.fiscal_year,
       periodStartDate: p.period_start_date ? new Date(p.period_start_date) : undefined,
       periodEndDate: p.period_end_date ? new Date(p.period_end_date) : undefined,
-      balanceSheet: p.balance_sheet_items?.[0] || {},
-      profitLoss: p.profit_loss_items?.[0] || {},
+      balanceSheet: (p.balance_sheet_items?.[0] || {}) as PeriodFinancialData['balanceSheet'],
+      profitLoss: (p.profit_loss_items?.[0] || {}) as PeriodFinancialData['profitLoss'],
       manualInputs: {
-        depreciation: p.manual_inputs?.find((m: any) => m.input_type === 'depreciation')
+        depreciation: p.manual_inputs?.find((m) => m.input_type === 'depreciation')
           ?.amount,
-        capex: p.manual_inputs?.find((m: any) => m.input_type === 'capex')?.amount,
+        capex: p.manual_inputs?.find((m) => m.input_type === 'capex')?.amount,
       },
       accountDetails: [],
       metrics: undefined,

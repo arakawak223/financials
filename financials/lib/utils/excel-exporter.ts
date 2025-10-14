@@ -1,7 +1,6 @@
 // Excel出力ユーティリティ
 import ExcelJS from 'exceljs'
 import type { FinancialAnalysis, PeriodFinancialData } from '../types/financial'
-import { formatNumber } from './financial-calculations'
 
 /**
  * 財務分析データをExcelファイルとして出力
@@ -184,7 +183,7 @@ function createRawDataSheet(workbook: ExcelJS.Workbook, analysis: FinancialAnaly
   ]
 
   bsFields.forEach((field) => {
-    const row = [field, ...analysis.periods.map((p) => (p.balanceSheet as any)[field] || 0)]
+    const row = [field, ...analysis.periods.map((p) => (p.balanceSheet as Record<string, number | undefined>)[field] || 0)]
     sheet.addRow(row)
   })
 
@@ -205,7 +204,7 @@ function createRawDataSheet(workbook: ExcelJS.Workbook, analysis: FinancialAnaly
   ]
 
   plFields.forEach((field) => {
-    const row = [field, ...analysis.periods.map((p) => (p.profitLoss as any)[field] || 0)]
+    const row = [field, ...analysis.periods.map((p) => (p.profitLoss as Record<string, number | undefined>)[field] || 0)]
     sheet.addRow(row)
   })
 }
@@ -233,7 +232,7 @@ function createChartDataSheet(workbook: ExcelJS.Workbook, analysis: FinancialAna
   metrics.forEach((metric) => {
     sheet.addRow([metric.label])
     sheet.addRow(['年度', ...analysis.periods.map((p) => p.fiscalYear)])
-    sheet.addRow(['値', ...analysis.periods.map((p) => (p.metrics as any)?.[metric.key] || 0)])
+    sheet.addRow(['値', ...analysis.periods.map((p) => (p.metrics as Record<string, number | undefined>)?.[metric.key] || 0)])
     sheet.addRow([])
   })
 }
@@ -248,7 +247,7 @@ function addAccountRow(
   section: 'balanceSheet' | 'profitLoss',
   field: string
 ) {
-  const values = periods.map((p) => (p[section] as any)[field] || 0)
+  const values = periods.map((p) => (p[section] as Record<string, number | undefined>)[field] || 0)
   const row = [label, ...values]
 
   // 最新期と前期の増減額を追加
@@ -271,7 +270,7 @@ function addMetricRow(
   unit: string
 ) {
   const values = periods.map((p) => {
-    const value = (p.metrics as any)?.[field]
+    const value = (p.metrics as Record<string, number | undefined>)?.[field]
     return value !== undefined ? value : '-'
   })
   sheet.addRow([`${label} (${unit})`, ...values])

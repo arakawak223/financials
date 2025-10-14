@@ -244,7 +244,7 @@ export interface UploadedFile {
   fileSize?: number
   mimeType?: string
   ocrStatus: OcrStatus
-  ocrResult?: any
+  ocrResult?: unknown
   createdAt: Date
 }
 

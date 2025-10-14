@@ -10,7 +10,6 @@ import {
   Plus,
   ArrowLeft,
   Building2,
-  Edit,
   Trash2,
   Search,
   Users,
@@ -66,6 +65,7 @@ export default function CompaniesPage() {
 
   useEffect(() => {
     loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadData = async () => {
@@ -108,7 +108,7 @@ export default function CompaniesPage() {
   // 企業関連の関数
   const handleCreateCompany = async () => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('companies')
         .insert([
           {
@@ -156,7 +156,7 @@ export default function CompaniesPage() {
   // グループ関連の関数
   const handleCreateGroup = async () => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('company_groups')
         .insert([
           {
@@ -197,7 +197,7 @@ export default function CompaniesPage() {
   // 業種関連の関数
   const handleCreateIndustry = async () => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('industries')
         .insert([
           {

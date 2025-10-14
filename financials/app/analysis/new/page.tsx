@@ -19,7 +19,15 @@ export default function NewAnalysisPage() {
   const [industryId, setIndustryId] = useState('')
   const [fiscalYearStart, setFiscalYearStart] = useState(new Date().getFullYear() - 2)
   const [fiscalYearEnd, setFiscalYearEnd] = useState(new Date().getFullYear())
-  const [uploadedFiles, setUploadedFiles] = useState<any[]>([])
+  const [uploadedFiles, setUploadedFiles] = useState<
+    Array<{
+      file: File
+      fileType: 'financial_statement' | 'account_details'
+      fiscalYear: number
+      status: 'pending' | 'processing' | 'success' | 'error'
+      error?: string
+    }>
+  >([])
 
   // 期待されるファイルリスト
   const expectedFiles = []

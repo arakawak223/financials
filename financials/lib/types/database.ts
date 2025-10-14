@@ -71,10 +71,11 @@ export interface Database {
         Row: {
           id: string
           name: string
-          company_group_id: string | null
+          group_id: string | null
           industry_id: string | null
           password_hash: string | null
-          code: string | null
+          company_code: string | null
+          address: string | null
           description: string | null
           created_at: string
           updated_at: string
@@ -82,10 +83,11 @@ export interface Database {
         Insert: {
           id?: string
           name: string
-          company_group_id?: string | null
+          group_id?: string | null
           industry_id?: string | null
           password_hash?: string | null
-          code?: string | null
+          company_code?: string | null
+          address?: string | null
           description?: string | null
           created_at?: string
           updated_at?: string
@@ -93,10 +95,11 @@ export interface Database {
         Update: {
           id?: string
           name?: string
-          company_group_id?: string | null
+          group_id?: string | null
           industry_id?: string | null
           password_hash?: string | null
-          code?: string | null
+          company_code?: string | null
+          address?: string | null
           description?: string | null
           created_at?: string
           updated_at?: string
@@ -111,6 +114,7 @@ export interface Database {
           fiscal_year_end: number
           periods_count: number
           status: string
+          notes: string | null
           created_by: string | null
           created_at: string
           updated_at: string
@@ -123,6 +127,7 @@ export interface Database {
           fiscal_year_end: number
           periods_count?: number
           status?: string
+          notes?: string | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -135,6 +140,7 @@ export interface Database {
           fiscal_year_end?: number
           periods_count?: number
           status?: string
+          notes?: string | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -454,8 +460,8 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['access_logs']['Insert']>
       }
     }
-    Views: {}
-    Functions: {}
-    Enums: {}
+    Views: Record<string, never>
+    Functions: Record<string, never>
+    Enums: Record<string, never>
   }
 }

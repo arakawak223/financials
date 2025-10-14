@@ -416,6 +416,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply Auto-update Triggers to Each Table
+
+
 CREATE TRIGGER update_industries_updated_at BEFORE UPDATE ON industries
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -448,3 +450,4 @@ CREATE TRIGGER update_financial_metrics_updated_at BEFORE UPDATE ON financial_me
 
 CREATE TRIGGER update_analysis_comments_updated_at BEFORE UPDATE ON analysis_comments
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+

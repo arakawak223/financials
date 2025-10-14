@@ -36,7 +36,8 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
   ) => {
     const newPeriods = [...editedPeriods]
     const numValue = parseFloat(value.replace(/,/g, '')) || 0
-    ;(newPeriods[periodIndex][section] as any)[field] = numValue
+    const sectionData = newPeriods[periodIndex][section] as Record<string, number | undefined>
+    sectionData[field] = numValue
     setEditedPeriods(newPeriods)
   }
 
@@ -106,14 +107,14 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
                           type="text"
                           className="w-full text-right border rounded px-2 py-1"
                           value={
-                            (period.balanceSheet as any)[item.key]?.toLocaleString() || ''
+                            (period.balanceSheet as Record<string, number | undefined>)[item.key]?.toLocaleString() || ''
                           }
                           onChange={(e) =>
                             updateValue(index, 'balanceSheet', item.key, e.target.value)
                           }
                         />
                       ) : (
-                        formatNumber((period.balanceSheet as any)[item.key])
+                        formatNumber((period.balanceSheet as Record<string, number | undefined>)[item.key])
                       )}
                     </td>
                   ))}
@@ -146,14 +147,14 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
                           type="text"
                           className="w-full text-right border rounded px-2 py-1"
                           value={
-                            (period.balanceSheet as any)[item.key]?.toLocaleString() || ''
+                            (period.balanceSheet as Record<string, number | undefined>)[item.key]?.toLocaleString() || ''
                           }
                           onChange={(e) =>
                             updateValue(index, 'balanceSheet', item.key, e.target.value)
                           }
                         />
                       ) : (
-                        formatNumber((period.balanceSheet as any)[item.key])
+                        formatNumber((period.balanceSheet as Record<string, number | undefined>)[item.key])
                       )}
                     </td>
                   ))}
@@ -180,14 +181,14 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
                           type="text"
                           className="w-full text-right border rounded px-2 py-1"
                           value={
-                            (period.balanceSheet as any)[item.key]?.toLocaleString() || ''
+                            (period.balanceSheet as Record<string, number | undefined>)[item.key]?.toLocaleString() || ''
                           }
                           onChange={(e) =>
                             updateValue(index, 'balanceSheet', item.key, e.target.value)
                           }
                         />
                       ) : (
-                        formatNumber((period.balanceSheet as any)[item.key])
+                        formatNumber((period.balanceSheet as Record<string, number | undefined>)[item.key])
                       )}
                     </td>
                   ))}
@@ -235,14 +236,14 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
                           type="text"
                           className="w-full text-right border rounded px-2 py-1"
                           value={
-                            (period.profitLoss as any)[item.key]?.toLocaleString() || ''
+                            (period.profitLoss as Record<string, number | undefined>)[item.key]?.toLocaleString() || ''
                           }
                           onChange={(e) =>
                             updateValue(index, 'profitLoss', item.key, e.target.value)
                           }
                         />
                       ) : (
-                        formatNumber((period.profitLoss as any)[item.key])
+                        formatNumber((period.profitLoss as Record<string, number | undefined>)[item.key])
                       )}
                     </td>
                   ))}
@@ -282,14 +283,14 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
                           type="text"
                           className="w-full text-right border rounded px-2 py-1"
                           value={
-                            (period.manualInputs as any)[item.key]?.toLocaleString() || ''
+                            (period.manualInputs as Record<string, number | undefined>)[item.key]?.toLocaleString() || ''
                           }
                           onChange={(e) =>
                             updateValue(index, 'manualInputs', item.key, e.target.value)
                           }
                         />
                       ) : (
-                        formatNumber((period.manualInputs as any)[item.key])
+                        formatNumber((period.manualInputs as Record<string, number | undefined>)[item.key])
                       )}
                     </td>
                   ))}

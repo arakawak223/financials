@@ -60,7 +60,25 @@ export function FinancialCharts({ charts }: FinancialChartsProps) {
 }
 
 // 財務指標からチャートデータを生成するヘルパー関数
-export function generateChartsFromMetrics(periods: any[]): ChartData[] {
+export function generateChartsFromMetrics(periods: Array<{
+  fiscalYear: number
+  profitLoss?: {
+    netSales?: number
+    operatingIncome?: number
+  }
+  metrics?: {
+    netCash?: number
+    ebitda?: number
+    fcf?: number
+    grossProfitMargin?: number
+    operatingProfitMargin?: number
+    currentRatio?: number
+    roe?: number
+    roa?: number
+    receivablesTurnoverMonths?: number
+    inventoryTurnoverMonths?: number
+  }
+}>): ChartData[] {
   const charts: ChartData[] = []
 
   // NetCash推移

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { extractFinancialDataFromPdf } from '@/lib/utils/pdf-processor'
 import type { FileType } from '@/lib/types/financial'
 
 export async function POST(request: NextRequest) {
@@ -72,54 +71,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // PDFからデータを抽出（非同期処理）
-    // 本番環境では、これはバックグラウンドジョブで実行すべき
-    try {
-      const extractResult = await extractFinancialDataFromPdf(
-        file,
-        fileType,
-        fiscalYear
-      )
-
-      // 抽出結果をDBに保存
-      const { error: updateError } = await supabase
-        .from('uploaded_files')
-        .update({
-          ocr_status: extractResult.success ? 'completed' : 'failed',
-          ocr_result: extractResult,
-        })
-        .eq('id', fileRecord.id)
-
-      if (updateError) {
-        console.error('Update error:', updateError)
-      }
-
-      return NextResponse.json({
-        success: true,
-        fileId: fileRecord.id,
-        extractResult,
-      })
-    } catch (extractError) {
-      console.error('Extract error:', extractError)
-
-      // エラーステータスを更新
-      await supabase
-        .from('uploaded_files')
-        .update({
-          ocr_status: 'failed',
-          ocr_result: {
-            success: false,
-            errors: [extractError instanceof Error ? extractError.message : 'Unknown error'],
-          },
-        })
-        .eq('id', fileRecord.id)
-
-      return NextResponse.json({
-        success: false,
-        fileId: fileRecord.id,
-        error: 'PDF extraction failed',
-      })
-    }
+    // PDF処理はクライアントサイドで行われる
+    // このエンドポイントはファイルのアップロードのみを担当
+    return NextResponse.json({
+      success: true,
+      fileId: fileRecord.id,
+      message: 'File uploaded successfully. Please process on client side.',
+    })
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(

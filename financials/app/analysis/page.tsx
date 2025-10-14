@@ -24,7 +24,7 @@ type FinancialAnalysis =
 type Company = Database['public']['Tables']['companies']['Row']
 
 interface AnalysisWithCompany extends FinancialAnalysis {
-  company?: Company
+  companies?: Company
 }
 
 export default function AnalysesPage() {
@@ -38,27 +38,31 @@ export default function AnalysesPage() {
 
   useEffect(() => {
     loadAnalyses()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadAnalyses = async () => {
     setLoading(true)
     try {
+      console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+
       // 分析データを企業情報と一緒に取得
       const { data, error } = await supabase
         .from('financial_analyses')
-        .select(
-          `
-          *,
-          company:companies(*)
-        `
-        )
+        .select('*, companies(*)')
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      console.log('Supabase response:', { data, error })
 
-      setAnalyses(data as any || [])
+      if (error) {
+        console.error('Supabase error details:', error)
+        throw error
+      }
+
+      setAnalyses((data as AnalysisWithCompany[]) || [])
     } catch (error) {
       console.error('分析データ読み込みエラー:', error)
+      console.error('Error details:', JSON.stringify(error, null, 2))
     } finally {
       setLoading(false)
     }
@@ -85,7 +89,7 @@ export default function AnalysesPage() {
   // フィルタリングされた分析リスト
   const filteredAnalyses = analyses.filter((analysis) => {
     const matchesSearch =
-      analysis.company?.name
+      analysis.companies?.name
         ?.toLowerCase()
         .includes(searchQuery.toLowerCase()) ||
       analysis.notes?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -185,7 +189,7 @@ export default function AnalysesPage() {
                   <div className="flex items-center gap-3 mb-3">
                     <Building2 className="h-5 w-5 text-primary" />
                     <h3 className="text-xl font-semibold">
-                      {analysis.company?.name || '企業名不明'}
+                      {analysis.companies?.name || '企業名不明'}
                     </h3>
                     <span
                       className={`text-xs px-2 py-1 rounded ${getStatusColor(

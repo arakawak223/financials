@@ -58,6 +58,7 @@ export async function extractTextWithOcr(file: File): Promise<{
       await page.render({
         canvasContext: context,
         viewport: viewport,
+        canvas: canvas as unknown as HTMLCanvasElement,
       }).promise
 
       // OCR実行
