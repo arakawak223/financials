@@ -10,18 +10,20 @@ export async function updateSession(request: NextRequest) {
   // If the env vars are not set, skip middleware check. You can remove this
   // once you setup the project.
   if (!hasEnvVars) {
+    console.warn('Supabase environment variables are not set, skipping middleware check');
     return supabaseResponse;
   }
 
-  // With Fluid compute, don't put this client in a global environment
-  // variable. Always create a new one on each request.
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+  try {
+    // With Fluid compute, don't put this client in a global environment
+    // variable. Always create a new one on each request.
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
 
-  const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
+    const supabase = createServerClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -62,18 +64,25 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // IMPORTANT: You *must* return the supabaseResponse object as it is.
-  // If you're creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object to fit your needs, but avoid changing
-  //    the cookies!
-  // 4. Finally:
-  //    return myNewResponse
-  // If this is not done, you may be causing the browser and server to go out
-  // of sync and terminate the user's session prematurely!
+    // IMPORTANT: You *must* return the supabaseResponse object as it is.
+    // If you're creating a new response object with NextResponse.next() make sure to:
+    // 1. Pass the request in it, like so:
+    //    const myNewResponse = NextResponse.next({ request })
+    // 2. Copy over the cookies, like so:
+    //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+    // 3. Change the myNewResponse object to fit your needs, but avoid changing
+    //    the cookies!
+    // 4. Finally:
+    //    return myNewResponse
+    // If this is not done, you may be causing the browser and server to go out
+    // of sync and terminate the user's session prematurely!
 
-  return supabaseResponse;
+    return supabaseResponse;
+  } catch (error) {
+    console.error('Error in updateSession:', error);
+    // エラーが発生した場合は、認証チェックをスキップしてリクエストを通す
+    return NextResponse.next({
+      request,
+    });
+  }
 }
