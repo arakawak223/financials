@@ -155,3 +155,4 @@ INSERT INTO analysis_comments (
  false, 2,
  NOW(), NOW())
 ON CONFLICT DO NOTHING;
+
