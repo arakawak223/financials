@@ -61,17 +61,60 @@ export default function NewAnalysisPage() {
   }
 
   const handleSubmit = async () => {
-    // TODO: API呼び出しで分析を作成
-    console.log('Creating analysis...', {
-      companyName,
-      industryId,
-      fiscalYearStart,
-      fiscalYearEnd,
-      uploadedFiles,
-    })
+    try {
+      // 分析を作成
+      const createResponse = await fetch('/api/analysis/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyName,
+          industryId: industryId || null,
+          fiscalYearStart,
+          fiscalYearEnd,
+        }),
+      })
 
-    // 一旦、トップページに戻る
-    router.push('/')
+      if (!createResponse.ok) {
+        throw new Error('分析の作成に失敗しました')
+      }
+
+      const { analysisId } = await createResponse.json()
+
+      // PDFファイルを処理
+      for (const fileInfo of uploadedFiles) {
+        const formData = new FormData()
+        formData.append('file', fileInfo.file)
+        formData.append('analysisId', analysisId)
+        formData.append('fileType', fileInfo.fileType)
+        formData.append('fiscalYear', fileInfo.fiscalYear.toString())
+
+        const pdfResponse = await fetch('/api/pdf/process', {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (!pdfResponse.ok) {
+          console.error(`Failed to process ${fileInfo.file.name}`)
+        }
+      }
+
+      // 分析を実行
+      const executeResponse = await fetch('/api/analysis/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ analysisId }),
+      })
+
+      if (!executeResponse.ok) {
+        throw new Error('分析の実行に失敗しました')
+      }
+
+      // 分析詳細ページに遷移
+      router.push(`/analysis/${analysisId}`)
+    } catch (error) {
+      console.error('Error creating analysis:', error)
+      alert(error instanceof Error ? error.message : '分析の作成に失敗しました')
+    }
   }
 
   return (
