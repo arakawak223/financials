@@ -1,0 +1,36 @@
+{
+  "name": "Financial Analysis Application",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "forwardPorts": [3000, 54321, 54322, 54323, 54324],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js Dev Server",
+      "onAutoForward": "notify"
+    },
+    "54321": {
+      "label": "Supabase API",
+      "visibility": "public",
+      "onAutoForward": "notify"
+    },
+    "54322": {
+      "label": "Supabase DB",
+      "visibility": "public"
+    },
+    "54323": {
+      "label": "Supabase Studio",
+      "visibility": "public"
+    },
+    "54324": {
+      "label": "Supabase Inbucket",
+      "visibility": "public"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}
