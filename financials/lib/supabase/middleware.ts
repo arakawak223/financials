@@ -47,6 +47,10 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: If you remove getClaims() and you use server-side rendering
   // with the Supabase client, your users may be randomly logged out.
+
+  // 開発中はプロキシを使用しているため、middlewareでの認証チェックをスキップ
+  // 本番環境では、この部分を有効化するか、別の認証方式を使用してください
+  /*
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
@@ -61,6 +65,7 @@ export async function updateSession(request: NextRequest) {
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
   }
+  */
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:
