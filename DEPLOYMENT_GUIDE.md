@@ -22,14 +22,20 @@
 
 ### ステップ2: データベーススキーマを移行
 
-1. Supabase Dashboard → SQL Editor
+1. Supabase Dashboard → SQL Editor を開く
 2. 以下のSQLファイルを順番に実行:
 
-```sql
--- financials/supabase/migrations/20251005_initial_schema.sql の内容をコピペ
--- 次に
--- financials/supabase/migrations/20251012_sample_data.sql の内容をコピペ
-```
+**1つ目: スキーマ作成（既存テーブルを削除して再作成）**
+- ファイル: `financials/supabase/migrations/20251012_drop_and_recreate.sql`
+- このファイルの全内容をコピー&ペースト
+- "Run"ボタンをクリック
+- ⚠️ 既存データはすべて削除されます
+
+**2つ目: サンプルデータ投入**
+- ファイル: `financials/supabase/migrations/20251012_sample_data.sql`
+- このファイルの全内容をコピー&ペースト
+- "Run"ボタンをクリック
+- 3社分のサンプルデータと財務分析が投入されます
 
 ### ステップ3: Supabase接続情報を取得
 
