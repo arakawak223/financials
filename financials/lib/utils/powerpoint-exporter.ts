@@ -1,11 +1,12 @@
 // PowerPoint出力ユーティリティ
 import pptxgen from 'pptxgenjs'
-import type { FinancialAnalysis, PeriodFinancialData } from '../types/financial'
+import type { FinancialAnalysis, AmountUnit } from '../types/financial'
+import { convertAmount, getUnitLabel } from './financial-calculations'
 
 /**
  * 財務分析データをPowerPointファイルとして出力
  */
-export async function exportToPowerPoint(analysis: FinancialAnalysis): Promise<Blob> {
+export async function exportToPowerPoint(analysis: FinancialAnalysis, unit: AmountUnit = 'millions'): Promise<Blob> {
   const pptx = new pptxgen()
 
   // プレゼンテーション設定
@@ -15,25 +16,25 @@ export async function exportToPowerPoint(analysis: FinancialAnalysis): Promise<B
   pptx.subject = '財務分析'
 
   // スライド1: タイトル
-  createTitleSlide(pptx, analysis)
+  createTitleSlide(pptx, analysis, unit)
 
   // スライド2: 財務指標サマリー
-  createMetricsSummarySlide(pptx, analysis)
+  createMetricsSummarySlide(pptx, analysis, unit)
 
   // スライド3-4: グラフ（売上高・利益推移）
-  createSalesAndProfitSlide(pptx, analysis)
+  createSalesAndProfitSlide(pptx, analysis, unit)
 
   // スライド5: 収益性分析
-  createProfitabilitySlide(pptx, analysis)
+  createProfitabilitySlide(pptx, analysis, unit)
 
   // スライド6: 安全性分析
-  createSafetySlide(pptx, analysis)
+  createSafetySlide(pptx, analysis, unit)
 
   // スライド7: 勘定科目別推移
-  createAccountDetailsSlide(pptx, analysis)
+  createAccountDetailsSlide(pptx, analysis, unit)
 
   // スライド8: 総合評価コメント
-  createCommentSlide(pptx, analysis)
+  createCommentSlide(pptx, analysis, unit)
 
   // Blob として返す
   const blob = await pptx.write({ outputType: 'blob' }) as Blob
@@ -43,7 +44,7 @@ export async function exportToPowerPoint(analysis: FinancialAnalysis): Promise<B
 /**
  * タイトルスライド
  */
-function createTitleSlide(pptx: pptxgen, analysis: FinancialAnalysis) {
+function createTitleSlide(pptx: pptxgen, analysis: FinancialAnalysis, unit: AmountUnit) {
   const slide = pptx.addSlide()
   slide.background = { color: '0E4C92' }
 
@@ -90,12 +91,22 @@ function createTitleSlide(pptx: pptxgen, analysis: FinancialAnalysis) {
     color: 'CCCCCC',
     align: 'center',
   })
+
+  slide.addText(`※金額の単位: ${getUnitLabel(unit)}`, {
+    x: 0.5,
+    y: 5.6,
+    w: 9,
+    h: 0.3,
+    fontSize: 12,
+    color: 'CCCCCC',
+    align: 'center',
+  })
 }
 
 /**
  * 財務指標サマリー
  */
-function createMetricsSummarySlide(pptx: pptxgen, analysis: FinancialAnalysis) {
+function createMetricsSummarySlide(pptx: pptxgen, analysis: FinancialAnalysis, unit: AmountUnit) {
   const slide = pptx.addSlide()
   slide.addText('財務指標サマリー', {
     x: 0.5,
@@ -116,18 +127,19 @@ function createMetricsSummarySlide(pptx: pptxgen, analysis: FinancialAnalysis) {
       { text: '指標', options: { bold: true, fill: 'E0E0E0' } },
       { text: `${latestPeriod.fiscalYear}年度`, options: { bold: true, fill: 'E0E0E0' } },
     ],
-    [{ text: 'NetCash/NetDebt' }, { text: formatValue(metrics.netCash, '円') }],
-    [{ text: '流動比率' }, { text: formatValue(metrics.currentRatio, '%') }],
-    [{ text: 'EBITDA' }, { text: formatValue(metrics.ebitda, '円') }],
-    [{ text: 'FCF' }, { text: formatValue(metrics.fcf, '円') }],
-    [{ text: '売上高成長率' }, { text: formatValue(metrics.salesGrowthRate, '%') }],
-    [{ text: '売上総利益率' }, { text: formatValue(metrics.grossProfitMargin, '%') }],
-    [{ text: '営業利益率' }, { text: formatValue(metrics.operatingProfitMargin, '%') }],
-    [{ text: 'ROE' }, { text: formatValue(metrics.roe, '%') }],
-    [{ text: 'ROA' }, { text: formatValue(metrics.roa, '%') }],
+    [{ text: 'NetCash/NetDebt' }, { text: formatValue(metrics.netCash, '円', unit) }],
+    [{ text: '流動比率' }, { text: formatValue(metrics.currentRatio, '%', unit) }],
+    [{ text: 'EBITDA' }, { text: formatValue(metrics.ebitda, '円', unit) }],
+    [{ text: 'FCF' }, { text: formatValue(metrics.fcf, '円', unit) }],
+    [{ text: '売上高成長率' }, { text: formatValue(metrics.salesGrowthRate, '%', unit) }],
+    [{ text: '売上総利益率' }, { text: formatValue(metrics.grossProfitMargin, '%', unit) }],
+    [{ text: '営業利益率' }, { text: formatValue(metrics.operatingProfitMargin, '%', unit) }],
+    [{ text: 'ROE' }, { text: formatValue(metrics.roe, '%', unit) }],
+    [{ text: 'ROA' }, { text: formatValue(metrics.roa, '%', unit) }],
   ]
 
-  slide.addTable(tableData as any, {
+  // @ts-expect-error - pptxgenのaddTable型定義が不完全
+  slide.addTable(tableData, {
     x: 1.0,
     y: 1.2,
     w: 8.0,
@@ -140,7 +152,7 @@ function createMetricsSummarySlide(pptx: pptxgen, analysis: FinancialAnalysis) {
 /**
  * 売上高・利益推移
  */
-function createSalesAndProfitSlide(pptx: pptxgen, analysis: FinancialAnalysis) {
+function createSalesAndProfitSlide(pptx: pptxgen, analysis: FinancialAnalysis, unit: AmountUnit) {
   const slide = pptx.addSlide()
   slide.addText('売上高・営業利益推移', {
     x: 0.5,
@@ -157,12 +169,12 @@ function createSalesAndProfitSlide(pptx: pptxgen, analysis: FinancialAnalysis) {
     {
       name: '売上高',
       labels: analysis.periods.map((p) => `${p.fiscalYear}年度`),
-      values: analysis.periods.map((p) => (p.profitLoss.netSales || 0) / 1000000), // 百万円単位
+      values: analysis.periods.map((p) => convertAmount(p.profitLoss.netSales || 0, unit)),
     },
     {
       name: '営業利益',
       labels: analysis.periods.map((p) => `${p.fiscalYear}年度`),
-      values: analysis.periods.map((p) => (p.profitLoss.operatingIncome || 0) / 1000000),
+      values: analysis.periods.map((p) => convertAmount(p.profitLoss.operatingIncome || 0, unit)),
     },
   ]
 
@@ -174,14 +186,15 @@ function createSalesAndProfitSlide(pptx: pptxgen, analysis: FinancialAnalysis) {
     showTitle: false,
     showLegend: true,
     legendPos: 'b',
-    valAxisTitle: '百万円',
+    valAxisTitle: getUnitLabel(unit),
   })
 }
 
 /**
  * 収益性分析
  */
-function createProfitabilitySlide(pptx: pptxgen, analysis: FinancialAnalysis) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function createProfitabilitySlide(pptx: pptxgen, analysis: FinancialAnalysis, _unit: AmountUnit) {
   const slide = pptx.addSlide()
   slide.addText('収益性分析', {
     x: 0.5,
@@ -222,7 +235,7 @@ function createProfitabilitySlide(pptx: pptxgen, analysis: FinancialAnalysis) {
 /**
  * 安全性分析
  */
-function createSafetySlide(pptx: pptxgen, analysis: FinancialAnalysis) {
+function createSafetySlide(pptx: pptxgen, analysis: FinancialAnalysis, unit: AmountUnit) {
   const slide = pptx.addSlide()
   slide.addText('安全性分析', {
     x: 0.5,
@@ -245,22 +258,23 @@ function createSafetySlide(pptx: pptxgen, analysis: FinancialAnalysis) {
     ],
     [
       { text: 'NetCash/NetDebt' },
-      { text: formatValue(metrics.netCash, '円') },
+      { text: formatValue(metrics.netCash, '円', unit) },
       { text: evaluateNetCash(metrics.netCash) },
     ],
     [
       { text: '流動比率' },
-      { text: formatValue(metrics.currentRatio, '%') },
+      { text: formatValue(metrics.currentRatio, '%', unit) },
       { text: evaluateCurrentRatio(metrics.currentRatio) },
     ],
     [
       { text: 'EBITDA対有利子負債比率' },
-      { text: formatValue(metrics.ebitdaToInterestBearingDebt, '倍') },
+      { text: formatValue(metrics.ebitdaToInterestBearingDebt, '倍', unit) },
       { text: evaluateDebtRatio(metrics.ebitdaToInterestBearingDebt) },
     ],
   ]
 
-  slide.addTable(tableData as any, {
+  // @ts-expect-error - pptxgenのaddTable型定義が不完全
+  slide.addTable(tableData, {
     x: 1.5,
     y: 1.5,
     w: 7.0,
@@ -273,7 +287,7 @@ function createSafetySlide(pptx: pptxgen, analysis: FinancialAnalysis) {
 /**
  * 勘定科目別推移
  */
-function createAccountDetailsSlide(pptx: pptxgen, analysis: FinancialAnalysis) {
+function createAccountDetailsSlide(pptx: pptxgen, analysis: FinancialAnalysis, unit: AmountUnit) {
   const slide = pptx.addSlide()
   slide.addText('主要勘定科目推移', {
     x: 0.5,
@@ -296,19 +310,19 @@ function createAccountDetailsSlide(pptx: pptxgen, analysis: FinancialAnalysis) {
     [
       { text: '現金預金' },
       ...analysis.periods.map((p) => ({
-        text: formatValue(p.balanceSheet.cashAndDeposits, '円')
+        text: formatValue(p.balanceSheet.cashAndDeposits, '円', unit)
       })),
     ],
     [
       { text: '売掛金' },
       ...analysis.periods.map((p) => ({
-        text: formatValue(p.balanceSheet.accountsReceivable, '円')
+        text: formatValue(p.balanceSheet.accountsReceivable, '円', unit)
       })),
     ],
     [
       { text: '棚卸資産' },
       ...analysis.periods.map((p) => ({
-        text: formatValue(p.balanceSheet.inventory, '円')
+        text: formatValue(p.balanceSheet.inventory, '円', unit)
       })),
     ],
     [
@@ -317,13 +331,15 @@ function createAccountDetailsSlide(pptx: pptxgen, analysis: FinancialAnalysis) {
         text: formatValue(
           (p.balanceSheet.shortTermBorrowings || 0) +
             (p.balanceSheet.longTermBorrowings || 0),
-          '円'
+          '円',
+          unit
         )
       })),
     ],
   ]
 
-  slide.addTable(tableData as any, {
+  // @ts-expect-error - pptxgenのaddTable型定義が不完全
+  slide.addTable(tableData, {
     x: 0.8,
     y: 1.2,
     w: 8.4,
@@ -336,7 +352,8 @@ function createAccountDetailsSlide(pptx: pptxgen, analysis: FinancialAnalysis) {
 /**
  * 総合評価コメント
  */
-function createCommentSlide(pptx: pptxgen, analysis: FinancialAnalysis) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function createCommentSlide(pptx: pptxgen, analysis: FinancialAnalysis, _unit: AmountUnit) {
   const slide = pptx.addSlide()
   slide.addText('総合評価', {
     x: 0.5,
@@ -378,10 +395,15 @@ function createCommentSlide(pptx: pptxgen, analysis: FinancialAnalysis) {
 /**
  * 値をフォーマット
  */
-function formatValue(value: number | undefined, unit: string): string {
+function formatValue(value: number | undefined, unitType: string, amountUnit?: AmountUnit): string {
   if (value === undefined || value === null) return '-'
 
-  if (unit === '円') {
+  if (unitType === '円' && amountUnit) {
+    const converted = convertAmount(value, amountUnit)
+    return `${converted.toFixed(1)}${getUnitLabel(amountUnit)}`
+  }
+
+  if (unitType === '円') {
     if (Math.abs(value) >= 100000000) {
       return `${(value / 100000000).toFixed(1)}億円`
     } else if (Math.abs(value) >= 10000) {
@@ -390,11 +412,11 @@ function formatValue(value: number | undefined, unit: string): string {
     return `${value.toLocaleString()}円`
   }
 
-  if (unit === '%') {
+  if (unitType === '%') {
     return `${value.toFixed(1)}%`
   }
 
-  if (unit === '倍') {
+  if (unitType === '倍') {
     return `${value.toFixed(2)}倍`
   }
 

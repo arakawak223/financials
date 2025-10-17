@@ -17,8 +17,9 @@ export async function updateSession(request: NextRequest) {
   try {
     // With Fluid compute, don't put this client in a global environment
     // variable. Always create a new one on each request.
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+    // サーバーサイドでは絶対URLを使用（SUPABASE_URL）
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://placeholder.supabase.co';
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'placeholder-key';
 
     const supabase = createServerClient(
       supabaseUrl,
@@ -49,9 +50,10 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: If you remove getClaims() and you use server-side rendering
   // with the Supabase client, your users may be randomly logged out.
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
+  await supabase.auth.getClaims();
 
+  // 一時的に認証チェックを無効化（開発中）
+  /*
   if (
     request.nextUrl.pathname !== "/" &&
     !user &&
@@ -63,6 +65,7 @@ export async function updateSession(request: NextRequest) {
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);
   }
+  */
 
     // IMPORTANT: You *must* return the supabaseResponse object as it is.
     // If you're creating a new response object with NextResponse.next() make sure to:

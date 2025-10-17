@@ -4,10 +4,17 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Download, FileText, Loader2 } from 'lucide-react'
+import { ArrowLeft, Download, FileText, Loader2, TrendingUp } from 'lucide-react'
 import { FinancialDataTable } from '@/components/financial-data-table'
 import { FinancialCharts, generateChartsFromMetrics } from '@/components/financial-charts'
-import type { FinancialAnalysis } from '@/lib/types/financial'
+import { FinancialMetricsTable } from '@/components/financial-metrics-table'
+import {
+  calculateSalesCAGR,
+  calculateOperatingIncomeCAGR,
+  calculateEbitdaCAGR,
+  formatPercent
+} from '@/lib/utils/financial-calculations'
+import type { FinancialAnalysis, AmountUnit } from '@/lib/types/financial'
 
 export default function AnalysisDetailPage() {
   const router = useRouter()
@@ -17,11 +24,26 @@ export default function AnalysisDetailPage() {
   const [analysis, setAnalysis] = useState<FinancialAnalysis | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [amountUnit, setAmountUnit] = useState<AmountUnit>('millions')
+
+  // 初回マウント時にLocalStorageから単位設定を読み込む
+  useEffect(() => {
+    const savedUnit = localStorage.getItem('preferredAmountUnit') as AmountUnit | null
+    if (savedUnit && ['ones', 'thousands', 'millions', 'billions'].includes(savedUnit)) {
+      setAmountUnit(savedUnit)
+    }
+  }, [])
 
   useEffect(() => {
     loadAnalysis()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analysisId])
+
+  // 単位変更時にLocalStorageに保存
+  const handleUnitChange = (newUnit: AmountUnit) => {
+    setAmountUnit(newUnit)
+    localStorage.setItem('preferredAmountUnit', newUnit)
+  }
 
   const loadAnalysis = async () => {
     try {
@@ -34,6 +56,8 @@ export default function AnalysisDetailPage() {
 
       const data = await response.json()
       setAnalysis(data.analysis)
+
+      // デフォルト単位は百万円（ユーザーが変更可能）
     } catch (err) {
       console.error('Load analysis error:', err)
       setError(err instanceof Error ? err.message : '不明なエラー')
@@ -99,14 +123,18 @@ export default function AnalysisDetailPage() {
     <div className="container mx-auto py-8 max-w-7xl">
       {/* ヘッダー */}
       <div className="mb-8">
-        <Button
-          variant="ghost"
-          onClick={() => router.push('/analysis')}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          分析一覧に戻る
-        </Button>
+        <div className="flex gap-2 mb-4">
+          <Button variant="ghost" onClick={() => router.push('/')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            トップページ
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => router.push('/analysis')}
+          >
+            分析一覧
+          </Button>
+        </div>
 
         <div className="flex justify-between items-start">
           <div>
@@ -120,7 +148,21 @@ export default function AnalysisDetailPage() {
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {/* 単位切り替え */}
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">単位:</label>
+              <select
+                value={amountUnit}
+                onChange={(e) => handleUnitChange(e.target.value as AmountUnit)}
+                className="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="thousands">千円</option>
+                <option value="millions">百万円（デフォルト）</option>
+                <option value="billions">十億円</option>
+              </select>
+            </div>
+
             <Button
               variant="outline"
               onClick={() => handleExport('excel')}
@@ -162,6 +204,45 @@ export default function AnalysisDetailPage() {
         </div>
       )}
 
+      {/* CAGR（年平均成長率） */}
+      {analysis.periods.length >= 2 && (
+        <div className="mb-6">
+          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+            <TrendingUp className="h-6 w-6" />
+            CAGR（年平均成長率）
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="p-6">
+              <div className="text-sm text-gray-600 mb-2">売上高CAGR</div>
+              <div className="text-3xl font-bold text-blue-600">
+                {formatPercent(calculateSalesCAGR(analysis.periods))}
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                {analysis.periods[0].fiscalYear}年度 → {analysis.periods[analysis.periods.length - 1].fiscalYear}年度
+              </div>
+            </Card>
+            <Card className="p-6">
+              <div className="text-sm text-gray-600 mb-2">営業利益CAGR</div>
+              <div className="text-3xl font-bold text-green-600">
+                {formatPercent(calculateOperatingIncomeCAGR(analysis.periods))}
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                {analysis.periods[0].fiscalYear}年度 → {analysis.periods[analysis.periods.length - 1].fiscalYear}年度
+              </div>
+            </Card>
+            <Card className="p-6">
+              <div className="text-sm text-gray-600 mb-2">EBITDA CAGR</div>
+              <div className="text-3xl font-bold text-purple-600">
+                {formatPercent(calculateEbitdaCAGR(analysis.periods))}
+              </div>
+              <div className="text-xs text-gray-500 mt-2">
+                {analysis.periods[0].fiscalYear}年度 → {analysis.periods[analysis.periods.length - 1].fiscalYear}年度
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
       {/* グラフ */}
       {charts.length > 0 && (
         <div className="mb-6">
@@ -170,11 +251,18 @@ export default function AnalysisDetailPage() {
         </div>
       )}
 
+      {/* 財務指標テーブル */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold mb-4">財務指標</h2>
+        <FinancialMetricsTable periods={analysis.periods} unit={amountUnit} />
+      </div>
+
       {/* データテーブル */}
       <div className="mb-6">
         <h2 className="text-2xl font-semibold mb-4">財務データ</h2>
         <FinancialDataTable
           periods={analysis.periods}
+          unit={amountUnit}
           onUpdate={async (updatedPeriods) => {
             // データ更新API呼び出し
             try {

@@ -4,15 +4,16 @@ import { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Save, Edit, X } from 'lucide-react'
-import type { PeriodFinancialData } from '@/lib/types/financial'
-import { formatNumber } from '@/lib/utils/financial-calculations'
+import type { PeriodFinancialData, AmountUnit } from '@/lib/types/financial'
+import { formatAmountWithUnit, getUnitLabel } from '@/lib/utils/financial-calculations'
 
 interface FinancialDataTableProps {
   periods: PeriodFinancialData[]
+  unit: AmountUnit
   onUpdate?: (periods: PeriodFinancialData[]) => void
 }
 
-export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProps) {
+export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTableProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedPeriods, setEditedPeriods] = useState(periods)
 
@@ -41,8 +42,14 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
     setEditedPeriods(newPeriods)
   }
 
+  const formatValue = (value: number | undefined) => formatAmountWithUnit(value, unit, 1)
+
   return (
     <div className="space-y-6">
+      <div className="text-sm text-gray-600 mb-2">
+        ※金額の単位: {getUnitLabel(unit)}
+      </div>
+
       {/* アクションボタン */}
       <div className="flex justify-end gap-2">
         {!isEditing ? (
@@ -87,16 +94,15 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
                 </td>
               </tr>
               {[
-                { key: 'cashAndDeposits', label: '現金預金' },
-                { key: 'securities', label: '有価証券' },
-                { key: 'notesReceivable', label: '受取手形' },
-                { key: 'accountsReceivable', label: '売掛金' },
+                { key: 'cash_and_deposits', label: '現金預金' },
+                { key: 'accounts_receivable', label: '売掛金' },
                 { key: 'inventory', label: '棚卸資産' },
-                { key: 'totalCurrentAssets', label: '流動資産合計' },
-                { key: 'land', label: '土地' },
-                { key: 'buildings', label: '建物' },
-                { key: 'totalFixedAssets', label: '固定資産合計' },
-                { key: 'totalAssets', label: '資産合計' },
+                { key: 'current_assets_total', label: '流動資産合計' },
+                { key: 'tangible_fixed_assets', label: '有形固定資産' },
+                { key: 'intangible_fixed_assets', label: '無形固定資産' },
+                { key: 'investments_and_other_assets', label: '投資その他の資産' },
+                { key: 'fixed_assets_total', label: '固定資産合計' },
+                { key: 'total_assets', label: '資産合計' },
               ].map((item) => (
                 <tr key={item.key} className="border-b hover:bg-gray-50">
                   <td className="p-2">{item.label}</td>
@@ -114,7 +120,7 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
                           }
                         />
                       ) : (
-                        formatNumber((period.balanceSheet as Record<string, number | undefined>)[item.key])
+                        formatValue((period.balanceSheet as Record<string, number | undefined>)[item.key])
                       )}
                     </td>
                   ))}
@@ -128,15 +134,12 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
                 </td>
               </tr>
               {[
-                { key: 'notesPayable', label: '支払手形' },
-                { key: 'accountsPayable', label: '買掛金' },
-                { key: 'shortTermBorrowings', label: '短期借入金' },
-                { key: 'totalCurrentLiabilities', label: '流動負債合計' },
-                { key: 'longTermBorrowings', label: '長期借入金' },
-                { key: 'bondsPayable', label: '社債' },
-                { key: 'leaseObligations', label: 'リース債務' },
-                { key: 'totalLongTermLiabilities', label: '固定負債合計' },
-                { key: 'totalLiabilities', label: '負債合計' },
+                { key: 'accounts_payable', label: '買掛金' },
+                { key: 'short_term_borrowings', label: '短期借入金' },
+                { key: 'current_liabilities_total', label: '流動負債合計' },
+                { key: 'long_term_borrowings', label: '長期借入金' },
+                { key: 'fixed_liabilities_total', label: '固定負債合計' },
+                { key: 'total_liabilities', label: '負債合計' },
               ].map((item) => (
                 <tr key={item.key} className="border-b hover:bg-gray-50">
                   <td className="p-2">{item.label}</td>
@@ -154,7 +157,7 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
                           }
                         />
                       ) : (
-                        formatNumber((period.balanceSheet as Record<string, number | undefined>)[item.key])
+                        formatValue((period.balanceSheet as Record<string, number | undefined>)[item.key])
                       )}
                     </td>
                   ))}
@@ -168,9 +171,9 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
                 </td>
               </tr>
               {[
-                { key: 'capitalStock', label: '資本金' },
-                { key: 'retainedEarnings', label: '利益剰余金' },
-                { key: 'totalNetAssets', label: '純資産合計' },
+                { key: 'capital_stock', label: '資本金' },
+                { key: 'retained_earnings', label: '利益剰余金' },
+                { key: 'total_net_assets', label: '純資産合計' },
               ].map((item) => (
                 <tr key={item.key} className="border-b hover:bg-gray-50">
                   <td className="p-2">{item.label}</td>
@@ -188,7 +191,7 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
                           }
                         />
                       ) : (
-                        formatNumber((period.balanceSheet as Record<string, number | undefined>)[item.key])
+                        formatValue((period.balanceSheet as Record<string, number | undefined>)[item.key])
                       )}
                     </td>
                   ))}
@@ -216,16 +219,19 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
             </thead>
             <tbody>
               {[
-                { key: 'netSales', label: '売上高' },
-                { key: 'costOfSales', label: '売上原価' },
-                { key: 'grossProfit', label: '売上総利益' },
-                { key: 'personnelExpenses', label: '人件費' },
-                { key: 'executiveCompensation', label: '役員報酬' },
-                { key: 'rentExpenses', label: '地代家賃' },
-                { key: 'totalSellingGeneralAdmin', label: '販管費合計' },
-                { key: 'operatingIncome', label: '営業利益' },
-                { key: 'ordinaryIncome', label: '経常利益' },
-                { key: 'netIncome', label: '当期純利益' },
+                { key: 'net_sales', label: '売上高' },
+                { key: 'cost_of_sales', label: '売上原価' },
+                { key: 'gross_profit', label: '売上総利益' },
+                { key: 'selling_general_admin_expenses', label: '販管費' },
+                { key: 'operating_income', label: '営業利益' },
+                { key: 'non_operating_income', label: '営業外収益' },
+                { key: 'non_operating_expenses', label: '営業外費用' },
+                { key: 'ordinary_income', label: '経常利益' },
+                { key: 'extraordinary_income', label: '特別利益' },
+                { key: 'extraordinary_losses', label: '特別損失' },
+                { key: 'income_before_tax', label: '税引前当期純利益' },
+                { key: 'income_taxes', label: '法人税等' },
+                { key: 'net_income', label: '当期純利益' },
               ].map((item) => (
                 <tr key={item.key} className="border-b hover:bg-gray-50">
                   <td className="p-2">{item.label}</td>
@@ -243,7 +249,7 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
                           }
                         />
                       ) : (
-                        formatNumber((period.profitLoss as Record<string, number | undefined>)[item.key])
+                        formatValue((period.profitLoss as Record<string, number | undefined>)[item.key])
                       )}
                     </td>
                   ))}
@@ -290,7 +296,7 @@ export function FinancialDataTable({ periods, onUpdate }: FinancialDataTableProp
                           }
                         />
                       ) : (
-                        formatNumber((period.manualInputs as Record<string, number | undefined>)[item.key])
+                        formatValue((period.manualInputs as Record<string, number | undefined>)[item.key])
                       )}
                     </td>
                   ))}

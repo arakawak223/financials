@@ -71,6 +71,8 @@ export interface FinancialMetricsData {
   ebitda?: number                           // EBITDA
   fcf?: number                              // フリーキャッシュフロー
   salesGrowthRate?: number                  // 売上高成長率
+  operatingIncomeGrowthRate?: number        // 営業利益成長率
+  ebitdaGrowthRate?: number                 // EBITDA成長率
   grossProfitMargin?: number                // 売上総利益率
   operatingProfitMargin?: number            // 営業利益率
   ebitdaMargin?: number                     // EBITDA対売上高比率
@@ -329,6 +331,9 @@ export interface CompanyGroup {
 // ========================================
 // ユーティリティ型
 // ========================================
+
+// 金額の表示単位
+export type AmountUnit = 'ones' | 'thousands' | 'millions' | 'billions'
 
 // 期間比較データ
 export interface PeriodComparison {

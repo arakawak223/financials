@@ -11,7 +11,8 @@ export async function GET(
     const params = await context.params
     const analysisId = params.id
 
-    // 認証チェック
+    // 認証チェック（開発中は一時的に無効化）
+    /*
     const {
       data: { user },
       error: authError,
@@ -20,6 +21,7 @@ export async function GET(
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    */
 
     // 分析データを取得
     const { data: analysis, error: analysisError } = await supabase
@@ -66,29 +68,45 @@ export async function GET(
       .order('display_order', { ascending: true })
 
     // データを変換
-    const periods: PeriodFinancialData[] = periodsData?.map((p) => ({
-      fiscalYear: p.fiscal_year,
-      periodStartDate: p.period_start_date ? new Date(p.period_start_date) : undefined,
-      periodEndDate: p.period_end_date ? new Date(p.period_end_date) : undefined,
-      balanceSheet: Array.isArray(p.balance_sheet_items) && p.balance_sheet_items.length > 0
-        ? p.balance_sheet_items[0]
-        : {},
-      profitLoss: Array.isArray(p.profit_loss_items) && p.profit_loss_items.length > 0
-        ? p.profit_loss_items[0]
-        : {},
-      manualInputs: {
-        depreciation: Array.isArray(p.manual_inputs)
-          ? p.manual_inputs.find((m: { input_type: string; amount?: number }) => m.input_type === 'depreciation')?.amount
-          : undefined,
-        capex: Array.isArray(p.manual_inputs)
-          ? p.manual_inputs.find((m: { input_type: string; amount?: number }) => m.input_type === 'capex')?.amount
-          : undefined,
-      },
-      accountDetails: [],
-      metrics: Array.isArray(p.financial_metrics) && p.financial_metrics.length > 0
+    const periods: PeriodFinancialData[] = periodsData?.map((p) => {
+      const rawMetrics = Array.isArray(p.financial_metrics) && p.financial_metrics.length > 0
         ? p.financial_metrics[0]
-        : undefined,
-    })) || []
+        : null
+
+      return {
+        fiscalYear: p.fiscal_year,
+        periodStartDate: p.period_start_date ? new Date(p.period_start_date) : undefined,
+        periodEndDate: p.period_end_date ? new Date(p.period_end_date) : undefined,
+        balanceSheet: p.balance_sheet_items || {},
+        profitLoss: p.profit_loss_items || {},
+        manualInputs: {
+          depreciation: Array.isArray(p.manual_inputs)
+            ? p.manual_inputs.find((m: { input_type: string; amount?: number }) => m.input_type === 'depreciation')?.amount
+            : undefined,
+          capex: Array.isArray(p.manual_inputs)
+            ? p.manual_inputs.find((m: { input_type: string; amount?: number }) => m.input_type === 'capex')?.amount
+            : undefined,
+        },
+        accountDetails: [],
+        metrics: rawMetrics ? {
+          netCash: rawMetrics.net_cash,
+          currentRatio: rawMetrics.current_ratio,
+          receivablesTurnoverMonths: rawMetrics.accounts_receivable_turnover_months,
+          inventoryTurnoverMonths: rawMetrics.inventory_turnover_months,
+          ebitda: rawMetrics.ebitda,
+          fcf: rawMetrics.fcf,
+          salesGrowthRate: rawMetrics.sales_growth_rate,
+          operatingIncomeGrowthRate: rawMetrics.operating_income_growth_rate,
+          ebitdaGrowthRate: rawMetrics.ebitda_growth_rate,
+          grossProfitMargin: rawMetrics.gross_profit_margin,
+          operatingProfitMargin: rawMetrics.operating_profit_margin,
+          ebitdaMargin: rawMetrics.ebitda_margin,
+          ebitdaToInterestBearingDebt: rawMetrics.ebitda_to_interest_bearing_debt,
+          roe: rawMetrics.roe,
+          roa: rawMetrics.roa,
+        } : undefined,
+      }
+    }) || []
 
     const comments = commentsData?.map((c) => ({
       id: c.id,

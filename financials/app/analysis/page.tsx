@@ -36,7 +36,6 @@ export default function AnalysesPage() {
 
   useEffect(() => {
     loadAnalyses()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadAnalyses = async () => {
@@ -121,10 +120,12 @@ export default function AnalysesPage() {
     <div className="container mx-auto py-8 max-w-7xl">
       {/* ヘッダー */}
       <div className="mb-8">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          戻る
-        </Button>
+        <div className="flex gap-2 mb-4">
+          <Button variant="ghost" onClick={() => router.push('/')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            トップページ
+          </Button>
+        </div>
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">分析一覧</h1>
@@ -247,7 +248,7 @@ export default function AnalysesPage() {
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      router.push(`/analysis/${analysis.id}/view`)
+                      router.push(`/analysis/${analysis.id}`)
                     }
                     title="詳細を表示"
                   >
@@ -257,7 +258,7 @@ export default function AnalysesPage() {
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      router.push(`/analysis/${analysis.id}/export`)
+                      router.push(`/analysis/${analysis.id}`)
                     }
                     title="エクスポート"
                   >

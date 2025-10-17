@@ -9,10 +9,11 @@ import { cookies } from "next/headers";
 export async function createClient() {
   const cookieStore = await cookies();
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+  // サーバーサイドでは絶対URLを使用（SUPABASE_URL）
+  const supabaseUrl = process.env.SUPABASE_URL || 'https://placeholder.supabase.co';
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'placeholder-key';
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
     console.warn('Supabase environment variables are not set');
   }
 

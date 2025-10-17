@@ -14,6 +14,7 @@ import {
   Search,
   Users,
   Tag,
+  Edit,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/types/database'
@@ -34,6 +35,9 @@ export default function CompaniesPage() {
   const [showNewCompanyForm, setShowNewCompanyForm] = useState(false)
   const [showNewGroupForm, setShowNewGroupForm] = useState(false)
   const [showNewIndustryForm, setShowNewIndustryForm] = useState(false)
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null)
+  const [editingGroup, setEditingGroup] = useState<CompanyGroup | null>(null)
+  const [editingIndustry, setEditingIndustry] = useState<Industry | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedIndustry, setSelectedIndustry] = useState<string>('')
 
@@ -64,7 +68,6 @@ export default function CompaniesPage() {
 
   useEffect(() => {
     loadData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadData = async () => {
@@ -141,6 +144,37 @@ export default function CompaniesPage() {
     }
   }
 
+  const handleEditCompany = (company: Company) => {
+    setEditingCompany(company)
+    setShowNewCompanyForm(false)
+  }
+
+  const handleUpdateCompany = async () => {
+    if (!editingCompany) return
+    const supabase = createClient()
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          name: editingCompany.name,
+          company_code: editingCompany.company_code || null,
+          industry_id: editingCompany.industry_id || null,
+          group_id: editingCompany.group_id || null,
+          address: editingCompany.address || null,
+          description: editingCompany.description || null,
+        })
+        .eq('id', editingCompany.id)
+
+      if (error) throw error
+
+      await loadData()
+      setEditingCompany(null)
+    } catch (error) {
+      console.error('企業更新エラー:', error)
+      alert('企業の更新に失敗しました')
+    }
+  }
+
   const handleDeleteCompany = async (id: string) => {
     const supabase = createClient()
     if (!confirm('この企業を削除してもよろしいですか？')) return
@@ -178,6 +212,34 @@ export default function CompaniesPage() {
     } catch (error) {
       console.error('グループ作成エラー:', error)
       alert('グループの作成に失敗しました')
+    }
+  }
+
+  const handleEditGroup = (group: CompanyGroup) => {
+    setEditingGroup(group)
+    setShowNewGroupForm(false)
+  }
+
+  const handleUpdateGroup = async () => {
+    if (!editingGroup) return
+    const supabase = createClient()
+    try {
+      const { error } = await supabase
+        .from('company_groups')
+        .update({
+          name: editingGroup.name,
+          industry_id: editingGroup.industry_id || null,
+          description: editingGroup.description || null,
+        })
+        .eq('id', editingGroup.id)
+
+      if (error) throw error
+
+      await loadData()
+      setEditingGroup(null)
+    } catch (error) {
+      console.error('グループ更新エラー:', error)
+      alert('グループの更新に失敗しました')
     }
   }
 
@@ -221,6 +283,34 @@ export default function CompaniesPage() {
     } catch (error) {
       console.error('業種作成エラー:', error)
       alert('業種の作成に失敗しました')
+    }
+  }
+
+  const handleEditIndustry = (industry: Industry) => {
+    setEditingIndustry(industry)
+    setShowNewIndustryForm(false)
+  }
+
+  const handleUpdateIndustry = async () => {
+    if (!editingIndustry) return
+    const supabase = createClient()
+    try {
+      const { error } = await supabase
+        .from('industries')
+        .update({
+          name: editingIndustry.name,
+          code: editingIndustry.code || null,
+          description: editingIndustry.description || null,
+        })
+        .eq('id', editingIndustry.id)
+
+      if (error) throw error
+
+      await loadData()
+      setEditingIndustry(null)
+    } catch (error) {
+      console.error('業種更新エラー:', error)
+      alert('業種の更新に失敗しました')
     }
   }
 
@@ -273,9 +363,9 @@ export default function CompaniesPage() {
     <div className="container mx-auto py-8 max-w-7xl">
       {/* ヘッダー */}
       <div className="mb-8">
-        <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+        <Button variant="ghost" onClick={() => router.push('/')} className="mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          戻る
+          トップページ
         </Button>
         <div className="flex justify-between items-center">
           <div>
@@ -344,6 +434,133 @@ export default function CompaniesPage() {
               新規企業登録
             </Button>
           </div>
+
+          {/* 編集企業フォーム */}
+          {editingCompany && (
+            <Card className="p-6 mb-6">
+              <h2 className="text-2xl font-semibold mb-6">企業情報編集</h2>
+              <div className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit_name">企業名 *</Label>
+                    <Input
+                      id="edit_name"
+                      value={editingCompany.name}
+                      onChange={(e) =>
+                        setEditingCompany({ ...editingCompany, name: e.target.value })
+                      }
+                      placeholder="例: 株式会社サンプル"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit_company_code">企業コード</Label>
+                    <Input
+                      id="edit_company_code"
+                      value={editingCompany.company_code || ''}
+                      onChange={(e) =>
+                        setEditingCompany({
+                          ...editingCompany,
+                          company_code: e.target.value,
+                        })
+                      }
+                      placeholder="例: SMPL001"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit_industry_id">業種</Label>
+                    <select
+                      id="edit_industry_id"
+                      className="w-full border rounded-md px-3 py-2"
+                      value={editingCompany.industry_id || ''}
+                      onChange={(e) =>
+                        setEditingCompany({
+                          ...editingCompany,
+                          industry_id: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">選択してください</option>
+                      {industries.map((industry) => (
+                        <option key={industry.id} value={industry.id}>
+                          {industry.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit_group_id">企業グループ</Label>
+                    <select
+                      id="edit_group_id"
+                      className="w-full border rounded-md px-3 py-2"
+                      value={editingCompany.group_id || ''}
+                      onChange={(e) =>
+                        setEditingCompany({
+                          ...editingCompany,
+                          group_id: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">選択してください</option>
+                      {groups.map((group) => (
+                        <option key={group.id} value={group.id}>
+                          {group.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit_address">住所</Label>
+                  <Input
+                    id="edit_address"
+                    value={editingCompany.address || ''}
+                    onChange={(e) =>
+                      setEditingCompany({ ...editingCompany, address: e.target.value })
+                    }
+                    placeholder="例: 東京都千代田区..."
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit_description">備考</Label>
+                  <textarea
+                    id="edit_description"
+                    className="w-full border rounded-md px-3 py-2"
+                    rows={3}
+                    value={editingCompany.description || ''}
+                    onChange={(e) =>
+                      setEditingCompany({
+                        ...editingCompany,
+                        description: e.target.value,
+                      })
+                    }
+                    placeholder="メモや備考を入力"
+                  />
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditingCompany(null)}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    onClick={handleUpdateCompany}
+                    disabled={!editingCompany.name}
+                  >
+                    更新
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
 
           {/* 新規企業フォーム */}
           {showNewCompanyForm && (
@@ -564,6 +781,13 @@ export default function CompaniesPage() {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => handleEditCompany(company)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleDeleteCompany(company.id)}
                       >
                         <Trash2 className="h-4 w-4 text-red-500" />
@@ -598,6 +822,72 @@ export default function CompaniesPage() {
               新規グループ登録
             </Button>
           </div>
+
+          {/* 編集グループフォーム */}
+          {editingGroup && (
+            <Card className="p-6 mb-6">
+              <h2 className="text-2xl font-semibold mb-6">グループ情報編集</h2>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit_group_name">グループ名 *</Label>
+                  <Input
+                    id="edit_group_name"
+                    value={editingGroup.name}
+                    onChange={(e) =>
+                      setEditingGroup({ ...editingGroup, name: e.target.value })
+                    }
+                    placeholder="例: ○○グループ"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit_group_industry">業種</Label>
+                  <select
+                    id="edit_group_industry"
+                    className="w-full border rounded-md px-3 py-2"
+                    value={editingGroup.industry_id || ''}
+                    onChange={(e) =>
+                      setEditingGroup({ ...editingGroup, industry_id: e.target.value })
+                    }
+                  >
+                    <option value="">選択してください</option>
+                    {industries.map((industry) => (
+                      <option key={industry.id} value={industry.id}>
+                        {industry.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit_group_description">備考</Label>
+                  <textarea
+                    id="edit_group_description"
+                    className="w-full border rounded-md px-3 py-2"
+                    rows={3}
+                    value={editingGroup.description || ''}
+                    onChange={(e) =>
+                      setEditingGroup({ ...editingGroup, description: e.target.value })
+                    }
+                    placeholder="メモや備考を入力"
+                  />
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditingGroup(null)}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button onClick={handleUpdateGroup} disabled={!editingGroup.name}>
+                    更新
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
 
           {showNewGroupForm && (
             <Card className="p-6 mb-6">
@@ -729,6 +1019,13 @@ export default function CompaniesPage() {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => handleEditGroup(group)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleDeleteGroup(group.id)}
                       >
                         <Trash2 className="h-4 w-4 text-red-500" />
@@ -751,6 +1048,73 @@ export default function CompaniesPage() {
               新規業種登録
             </Button>
           </div>
+
+          {/* 編集業種フォーム */}
+          {editingIndustry && (
+            <Card className="p-6 mb-6">
+              <h2 className="text-2xl font-semibold mb-6">業種情報編集</h2>
+              <div className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit_industry_name">業種名 *</Label>
+                    <Input
+                      id="edit_industry_name"
+                      value={editingIndustry.name}
+                      onChange={(e) =>
+                        setEditingIndustry({ ...editingIndustry, name: e.target.value })
+                      }
+                      placeholder="例: 製造業"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit_industry_code">業種コード</Label>
+                    <Input
+                      id="edit_industry_code"
+                      value={editingIndustry.code || ''}
+                      onChange={(e) =>
+                        setEditingIndustry({ ...editingIndustry, code: e.target.value })
+                      }
+                      placeholder="例: MFG"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit_industry_description">説明</Label>
+                  <textarea
+                    id="edit_industry_description"
+                    className="w-full border rounded-md px-3 py-2"
+                    rows={3}
+                    value={editingIndustry.description || ''}
+                    onChange={(e) =>
+                      setEditingIndustry({
+                        ...editingIndustry,
+                        description: e.target.value,
+                      })
+                    }
+                    placeholder="業種の説明を入力"
+                  />
+                </div>
+
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditingIndustry(null)}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button
+                    onClick={handleUpdateIndustry}
+                    disabled={!editingIndustry.name}
+                  >
+                    更新
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
 
           {showNewIndustryForm && (
             <Card className="p-6 mb-6">
@@ -877,6 +1241,13 @@ export default function CompaniesPage() {
                     </div>
 
                     <div className="flex gap-2 ml-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditIndustry(industry)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"

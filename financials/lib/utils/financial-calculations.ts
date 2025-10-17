@@ -1,5 +1,9 @@
 // 財務指標計算ユーティリティ
-import type { PeriodFinancialData, FinancialMetricsData, PeriodComparison } from '../types/financial'
+import type { PeriodFinancialData, FinancialMetricsData, PeriodComparison, AmountUnit } from '../types/financial'
+
+// データベースのスネークケースフィールドを含む型
+type DbBalanceSheet = Record<string, number | undefined>
+type DbProfitLoss = Record<string, number | undefined>
 
 /**
  * NetCash / NetDebt を計算
@@ -7,7 +11,7 @@ import type { PeriodFinancialData, FinancialMetricsData, PeriodComparison } from
  */
 export function calculateNetCash(data: PeriodFinancialData): number | null {
   const { balanceSheet } = data
-  const cashAndDeposits = balanceSheet.cashAndDeposits ?? 0
+  const cashAndDeposits = (balanceSheet as DbBalanceSheet).cash_and_deposits ?? balanceSheet.cashAndDeposits ?? 0
 
   const interestBearingDebt = calculateInterestBearingDebt(data)
   if (interestBearingDebt === null) return null
@@ -21,10 +25,10 @@ export function calculateNetCash(data: PeriodFinancialData): number | null {
 export function calculateInterestBearingDebt(data: PeriodFinancialData): number | null {
   const { balanceSheet } = data
 
-  const shortTerm = balanceSheet.shortTermBorrowings ?? 0
-  const longTerm = balanceSheet.longTermBorrowings ?? 0
-  const bonds = balanceSheet.bondsPayable ?? 0
-  const lease = balanceSheet.leaseObligations ?? 0
+  const shortTerm = (balanceSheet as DbBalanceSheet).short_term_borrowings ?? balanceSheet.shortTermBorrowings ?? 0
+  const longTerm = (balanceSheet as DbBalanceSheet).long_term_borrowings ?? balanceSheet.longTermBorrowings ?? 0
+  const bonds = (balanceSheet as DbBalanceSheet).bonds_payable ?? balanceSheet.bondsPayable ?? 0
+  const lease = (balanceSheet as DbBalanceSheet).lease_obligations ?? balanceSheet.leaseObligations ?? 0
 
   return shortTerm + longTerm + bonds + lease
 }
@@ -35,8 +39,8 @@ export function calculateInterestBearingDebt(data: PeriodFinancialData): number 
  */
 export function calculateCurrentRatio(data: PeriodFinancialData): number | null {
   const { balanceSheet } = data
-  const currentAssets = balanceSheet.totalCurrentAssets
-  const currentLiabilities = balanceSheet.totalCurrentLiabilities
+  const currentAssets = (balanceSheet as DbBalanceSheet).current_assets_total ?? balanceSheet.totalCurrentAssets
+  const currentLiabilities = (balanceSheet as DbBalanceSheet).current_liabilities_total ?? balanceSheet.totalCurrentLiabilities
 
   if (!currentAssets || !currentLiabilities || currentLiabilities === 0) return null
 
@@ -49,8 +53,8 @@ export function calculateCurrentRatio(data: PeriodFinancialData): number | null 
  */
 export function calculateReceivablesTurnoverMonths(data: PeriodFinancialData): number | null {
   const { balanceSheet, profitLoss } = data
-  const receivables = balanceSheet.accountsReceivable
-  const sales = profitLoss.netSales
+  const receivables = (balanceSheet as DbBalanceSheet).accounts_receivable ?? balanceSheet.accountsReceivable
+  const sales = (profitLoss as DbProfitLoss).net_sales ?? profitLoss.netSales
 
   if (!receivables || !sales || sales === 0) return null
 
@@ -63,8 +67,8 @@ export function calculateReceivablesTurnoverMonths(data: PeriodFinancialData): n
  */
 export function calculateInventoryTurnoverMonths(data: PeriodFinancialData): number | null {
   const { balanceSheet, profitLoss } = data
-  const inventory = balanceSheet.inventory
-  const costOfSales = profitLoss.costOfSales
+  const inventory = (balanceSheet as DbBalanceSheet).inventory ?? balanceSheet.inventory
+  const costOfSales = (profitLoss as DbProfitLoss).cost_of_sales ?? profitLoss.costOfSales
 
   if (!inventory || !costOfSales || costOfSales === 0) return null
 
@@ -77,7 +81,7 @@ export function calculateInventoryTurnoverMonths(data: PeriodFinancialData): num
  */
 export function calculateEbitda(data: PeriodFinancialData): number | null {
   const { profitLoss, manualInputs } = data
-  const operatingIncome = profitLoss.operatingIncome
+  const operatingIncome = (profitLoss as DbProfitLoss).operating_income ?? profitLoss.operatingIncome
   const depreciation = manualInputs.depreciation
 
   if (operatingIncome === undefined || operatingIncome === null) return null
@@ -107,8 +111,8 @@ export function calculateSalesGrowthRate(
   currentData: PeriodFinancialData,
   previousData: PeriodFinancialData
 ): number | null {
-  const currentSales = currentData.profitLoss.netSales
-  const previousSales = previousData.profitLoss.netSales
+  const currentSales = (currentData.profitLoss as DbProfitLoss).net_sales ?? currentData.profitLoss.netSales
+  const previousSales = (previousData.profitLoss as DbProfitLoss).net_sales ?? previousData.profitLoss.netSales
 
   if (!currentSales || !previousSales || previousSales === 0) return null
 
@@ -136,13 +140,85 @@ export function calculateAverageSalesGrowthRate(periods: PeriodFinancialData[]):
 }
 
 /**
+ * 営業利益成長率を計算（前期比）
+ * = (当期営業利益 - 前期営業利益) ÷ 前期営業利益 × 100
+ */
+export function calculateOperatingIncomeGrowthRate(
+  currentData: PeriodFinancialData,
+  previousData: PeriodFinancialData
+): number | null {
+  const currentOI = (currentData.profitLoss as DbProfitLoss).operating_income ?? currentData.profitLoss.operatingIncome
+  const previousOI = (previousData.profitLoss as DbProfitLoss).operating_income ?? previousData.profitLoss.operatingIncome
+
+  if (!currentOI || !previousOI || previousOI === 0) return null
+
+  return ((currentOI - previousOI) / previousOI) * 100
+}
+
+/**
+ * 営業利益平均成長率を計算
+ */
+export function calculateAverageOperatingIncomeGrowthRate(periods: PeriodFinancialData[]): number | null {
+  if (periods.length < 2) return null
+
+  const growthRates: number[] = []
+
+  for (let i = 1; i < periods.length; i++) {
+    const rate = calculateOperatingIncomeGrowthRate(periods[i], periods[i - 1])
+    if (rate !== null) {
+      growthRates.push(rate)
+    }
+  }
+
+  if (growthRates.length === 0) return null
+
+  return growthRates.reduce((sum, rate) => sum + rate, 0) / growthRates.length
+}
+
+/**
+ * EBITDA成長率を計算（前期比）
+ * = (当期EBITDA - 前期EBITDA) ÷ 前期EBITDA × 100
+ */
+export function calculateEbitdaGrowthRate(
+  currentData: PeriodFinancialData,
+  previousData: PeriodFinancialData
+): number | null {
+  const currentEbitda = calculateEbitda(currentData)
+  const previousEbitda = calculateEbitda(previousData)
+
+  if (!currentEbitda || !previousEbitda || previousEbitda === 0) return null
+
+  return ((currentEbitda - previousEbitda) / previousEbitda) * 100
+}
+
+/**
+ * EBITDA平均成長率を計算
+ */
+export function calculateAverageEbitdaGrowthRate(periods: PeriodFinancialData[]): number | null {
+  if (periods.length < 2) return null
+
+  const growthRates: number[] = []
+
+  for (let i = 1; i < periods.length; i++) {
+    const rate = calculateEbitdaGrowthRate(periods[i], periods[i - 1])
+    if (rate !== null) {
+      growthRates.push(rate)
+    }
+  }
+
+  if (growthRates.length === 0) return null
+
+  return growthRates.reduce((sum, rate) => sum + rate, 0) / growthRates.length
+}
+
+/**
  * 売上総利益率を計算
  * = 売上総利益 ÷ 売上高 × 100
  */
 export function calculateGrossProfitMargin(data: PeriodFinancialData): number | null {
   const { profitLoss } = data
-  const grossProfit = profitLoss.grossProfit
-  const sales = profitLoss.netSales
+  const grossProfit = (profitLoss as DbProfitLoss).gross_profit ?? profitLoss.grossProfit
+  const sales = (profitLoss as DbProfitLoss).net_sales ?? profitLoss.netSales
 
   if (!grossProfit || !sales || sales === 0) return null
 
@@ -155,8 +231,8 @@ export function calculateGrossProfitMargin(data: PeriodFinancialData): number | 
  */
 export function calculateOperatingProfitMargin(data: PeriodFinancialData): number | null {
   const { profitLoss } = data
-  const operatingIncome = profitLoss.operatingIncome
-  const sales = profitLoss.netSales
+  const operatingIncome = (profitLoss as DbProfitLoss).operating_income ?? profitLoss.operatingIncome
+  const sales = (profitLoss as DbProfitLoss).net_sales ?? profitLoss.netSales
 
   if (!operatingIncome || !sales || sales === 0) return null
 
@@ -169,7 +245,7 @@ export function calculateOperatingProfitMargin(data: PeriodFinancialData): numbe
  */
 export function calculateEbitdaMargin(data: PeriodFinancialData): number | null {
   const ebitda = calculateEbitda(data)
-  const sales = data.profitLoss.netSales
+  const sales = (data.profitLoss as DbProfitLoss).net_sales ?? data.profitLoss.netSales
 
   if (!ebitda || !sales || sales === 0) return null
 
@@ -207,8 +283,8 @@ export function calculateEbitdaToInterestBearingDebt(
  */
 export function calculateRoe(data: PeriodFinancialData): number | null {
   const { profitLoss, balanceSheet } = data
-  const netIncome = profitLoss.netIncome
-  const netAssets = balanceSheet.totalNetAssets
+  const netIncome = (profitLoss as DbProfitLoss).net_income ?? profitLoss.netIncome
+  const netAssets = (balanceSheet as DbBalanceSheet).total_net_assets ?? balanceSheet.totalNetAssets
 
   if (!netIncome || !netAssets || netAssets === 0) return null
 
@@ -221,8 +297,8 @@ export function calculateRoe(data: PeriodFinancialData): number | null {
  */
 export function calculateRoa(data: PeriodFinancialData): number | null {
   const { profitLoss, balanceSheet } = data
-  const netIncome = profitLoss.netIncome
-  const totalAssets = balanceSheet.totalAssets
+  const netIncome = (profitLoss as DbProfitLoss).net_income ?? profitLoss.netIncome
+  const totalAssets = (balanceSheet as DbBalanceSheet).total_assets ?? balanceSheet.totalAssets
 
   if (!netIncome || !totalAssets || totalAssets === 0) return null
 
@@ -309,4 +385,151 @@ export function formatPercent(value: number | null | undefined, decimals: number
 export function formatCurrency(value: number | null | undefined): string {
   if (value === null || value === undefined) return '-'
   return `¥${formatNumber(value)}`
+}
+
+/**
+ * 金額の桁数から適切な単位を自動判定
+ * 売上や総資産が6桁程度に収まるように選択
+ */
+export function determineAmountUnit(periods: PeriodFinancialData[]): AmountUnit {
+  // 全期間の中から最大の金額を見つける
+  let maxAmount = 0
+
+  for (const period of periods) {
+    const sales = (period.profitLoss as DbProfitLoss).net_sales ?? period.profitLoss.netSales ?? 0
+    const totalAssets = (period.balanceSheet as DbBalanceSheet).total_assets ?? period.balanceSheet.totalAssets ?? 0
+
+    maxAmount = Math.max(maxAmount, sales, totalAssets)
+  }
+
+  // 10億円以上: 十億円単位
+  if (maxAmount >= 1_000_000_000) {
+    return 'billions'
+  }
+  // 1000万円以上: 百万円単位
+  if (maxAmount >= 10_000_000) {
+    return 'millions'
+  }
+  // 1万円以上: 千円単位
+  if (maxAmount >= 10_000) {
+    return 'thousands'
+  }
+  // それ以下: 円単位
+  return 'ones'
+}
+
+/**
+ * 金額を指定された単位に変換
+ */
+export function convertAmount(value: number, unit: AmountUnit): number {
+  switch (unit) {
+    case 'billions':
+      return value / 1_000_000_000
+    case 'millions':
+      return value / 1_000_000
+    case 'thousands':
+      return value / 1_000
+    case 'ones':
+    default:
+      return value
+  }
+}
+
+/**
+ * 単位のラベルを取得
+ */
+export function getUnitLabel(unit: AmountUnit): string {
+  switch (unit) {
+    case 'billions':
+      return '十億円'
+    case 'millions':
+      return '百万円'
+    case 'thousands':
+      return '千円'
+    case 'ones':
+    default:
+      return '円'
+  }
+}
+
+/**
+ * 金額を単位付きでフォーマット
+ */
+export function formatAmountWithUnit(
+  value: number | null | undefined,
+  unit: AmountUnit,
+  decimals: number = 0
+): string {
+  if (value === null || value === undefined) return '-'
+
+  const converted = convertAmount(value, unit)
+  return formatNumber(converted, decimals)
+}
+
+/**
+ * CAGR（年平均成長率）を計算
+ * = ((最終値 / 初期値) ^ (1 / 年数) - 1) × 100
+ */
+export function calculateCAGR(
+  startValue: number,
+  endValue: number,
+  years: number
+): number | null {
+  if (!startValue || !endValue || startValue <= 0 || years <= 0) return null
+
+  return (Math.pow(endValue / startValue, 1 / years) - 1) * 100
+}
+
+/**
+ * 売上高CAGR（年平均成長率）を計算
+ */
+export function calculateSalesCAGR(periods: PeriodFinancialData[]): number | null {
+  if (periods.length < 2) return null
+
+  const firstPeriod = periods[0]
+  const lastPeriod = periods[periods.length - 1]
+
+  const startSales = (firstPeriod.profitLoss as DbProfitLoss).net_sales ?? firstPeriod.profitLoss.netSales
+  const endSales = (lastPeriod.profitLoss as DbProfitLoss).net_sales ?? lastPeriod.profitLoss.netSales
+
+  if (!startSales || !endSales) return null
+
+  const years = periods.length - 1
+  return calculateCAGR(startSales, endSales, years)
+}
+
+/**
+ * 営業利益CAGR（年平均成長率）を計算
+ */
+export function calculateOperatingIncomeCAGR(periods: PeriodFinancialData[]): number | null {
+  if (periods.length < 2) return null
+
+  const firstPeriod = periods[0]
+  const lastPeriod = periods[periods.length - 1]
+
+  const startOI = (firstPeriod.profitLoss as DbProfitLoss).operating_income ?? firstPeriod.profitLoss.operatingIncome
+  const endOI = (lastPeriod.profitLoss as DbProfitLoss).operating_income ?? lastPeriod.profitLoss.operatingIncome
+
+  if (!startOI || !endOI) return null
+
+  const years = periods.length - 1
+  return calculateCAGR(startOI, endOI, years)
+}
+
+/**
+ * EBITDA CAGR（年平均成長率）を計算
+ */
+export function calculateEbitdaCAGR(periods: PeriodFinancialData[]): number | null {
+  if (periods.length < 2) return null
+
+  const firstPeriod = periods[0]
+  const lastPeriod = periods[periods.length - 1]
+
+  const startEbitda = calculateEbitda(firstPeriod)
+  const endEbitda = calculateEbitda(lastPeriod)
+
+  if (!startEbitda || !endEbitda) return null
+
+  const years = periods.length - 1
+  return calculateCAGR(startEbitda, endEbitda, years)
 }

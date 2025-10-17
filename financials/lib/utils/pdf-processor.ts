@@ -1,7 +1,7 @@
 // PDF処理ユーティリティ
 import * as pdfjsLib from 'pdfjs-dist'
 import { createWorker } from 'tesseract.js'
-import type { PdfExtractResult, FileType } from '../types/financial'
+import type { PdfExtractResult, FileType, AccountDetail, AccountType } from '../types/financial'
 
 // PDF.jsワーカーの設定
 if (typeof window !== 'undefined') {
@@ -21,7 +21,7 @@ export async function extractTextFromPdf(file: File): Promise<string[]> {
     const page = await pdf.getPage(pageNum)
     const textContent = await page.getTextContent()
     const pageText = textContent.items
-      .map((item: any) => item.str)
+      .map((item) => ('str' in item ? item.str : ''))
       .join(' ')
     textPages.push(pageText)
   }
@@ -117,7 +117,7 @@ export async function extractFinancialDataFromPdf(
     }
 
     // テキストから財務データを解析
-    const extractedData = parseFinancialData(textPages, fileType, fiscalYear)
+    const extractedData = parseFinancialData(textPages, fileType)
 
     return {
       success: true,
@@ -140,17 +140,16 @@ export async function extractFinancialDataFromPdf(
  */
 function parseFinancialData(
   textPages: string[],
-  fileType: FileType,
-  fiscalYear: number
+  fileType: FileType
 ): Partial<PdfExtractResult> {
   const fullText = textPages.join('\n')
 
   if (fileType === 'financial_statement') {
     // 決算書（BS・PL）のパース
-    return parseFinancialStatement(fullText, fiscalYear)
+    return parseFinancialStatement(fullText)
   } else {
     // 勘定科目内訳書のパース
-    return parseAccountDetails(fullText, fiscalYear)
+    return parseAccountDetails(fullText)
   }
 }
 
@@ -158,8 +157,7 @@ function parseFinancialData(
  * 決算書（BS・PL）のパース
  */
 function parseFinancialStatement(
-  text: string,
-  fiscalYear: number
+  text: string
 ): Partial<PdfExtractResult> {
   const errors: string[] = []
   const warnings: string[] = []
@@ -167,8 +165,8 @@ function parseFinancialStatement(
   // 正規表現パターンで金額を抽出
   // 実際の会計ソフトのフォーマットに応じて調整が必要
 
-  const balanceSheet: any = {}
-  const profitLoss: any = {}
+  const balanceSheet: Record<string, number> = {}
+  const profitLoss: Record<string, number> = {}
 
   // BS項目の抽出例
   const patterns = {
@@ -240,10 +238,9 @@ function parseFinancialStatement(
  * 勘定科目内訳書のパース
  */
 function parseAccountDetails(
-  text: string,
-  fiscalYear: number
+  text: string
 ): Partial<PdfExtractResult> {
-  const accountDetails: any[] = []
+  const accountDetails: AccountDetail[] = []
   const errors: string[] = []
   const warnings: string[] = []
 
@@ -252,18 +249,18 @@ function parseAccountDetails(
 
   // 簡易的な実装例（実際にはもっと詳細なパースが必要）
   const lines = text.split('\n')
-  let currentAccountType = ''
+  let currentAccountType: AccountType | '' = ''
 
   for (const line of lines) {
     // 勘定科目タイプを検出
     if (line.includes('現金預金')) {
-      currentAccountType = 'cash_deposits'
+      currentAccountType = 'cash_deposits' as AccountType
     } else if (line.includes('売掛金') || line.includes('受取手形')) {
-      currentAccountType = 'receivables'
+      currentAccountType = 'receivables' as AccountType
     } else if (line.includes('棚卸資産')) {
-      currentAccountType = 'inventory'
+      currentAccountType = 'inventory' as AccountType
     } else if (line.includes('借入金')) {
-      currentAccountType = 'borrowings'
+      currentAccountType = 'borrowings' as AccountType
     }
 
     // 金額パターンを検出
