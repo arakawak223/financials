@@ -283,7 +283,7 @@ INSERT INTO financial_metrics (
   roe, roa,
   accounts_receivable_turnover_months, inventory_turnover_months,
   ebitda, fcf, ebitda_to_interest_bearing_debt,
-  sales_growth_rate, operating_income_growth_rate, ebitda_growth_rate,
+  sales_growth_rate,
   created_at, updated_at
 ) VALUES
 -- 2021年度（成長率はNULL）
@@ -293,7 +293,7 @@ INSERT INTO financial_metrics (
  18.92, 6.54,
  2.80, 2.57,
  138000000, 103000000, 2.54,
- NULL, NULL, NULL,
+ NULL,
  NOW(), NOW()),
 -- 2022年度
 ('f1111111-1111-1111-1111-111111111111', '01111111-2222-2222-2222-222222222222',
@@ -302,7 +302,7 @@ INSERT INTO financial_metrics (
  21.30, 8.38,
  2.84, 2.48,
  182000000, 130000000, 1.76,
- 12.50, 36.36, 31.88,
+ 12.50,
  NOW(), NOW()),
 -- 2023年度
 ('f1111111-1111-1111-1111-111111111111', '01111111-3333-3333-3333-333333333333',
@@ -311,7 +311,7 @@ INSERT INTO financial_metrics (
  24.32, 10.95,
  2.89, 2.26,
  246000000, 188000000, 1.18,
- 17.04, 40.00, 35.16,
+ 17.04,
  NOW(), NOW()),
 
 -- サンプル商事
@@ -321,7 +321,7 @@ INSERT INTO financial_metrics (
  16.15, 5.92,
  2.23, 1.67,
  148000000, 126000000, 2.23,
- NULL, NULL, NULL,
+ NULL,
  NOW(), NOW()),
 ('f2222222-2222-2222-2222-222222222222', '02222222-2222-2222-2222-222222222222',
  -10000000, 173.33,
@@ -329,7 +329,7 @@ INSERT INTO financial_metrics (
  17.22, 7.00,
  2.21, 1.58,
  180000000, 152000000, 1.72,
- 12.50, 23.08, 21.62,
+ 12.50,
  NOW(), NOW()),
 ('f2222222-2222-2222-2222-222222222222', '02222222-3333-3333-3333-333333333333',
  90000000, 185.00,
@@ -337,7 +337,7 @@ INSERT INTO financial_metrics (
  17.72, 8.00,
  2.20, 1.46,
  222000000, 187000000, 1.31,
- 14.29, 25.00, 23.33,
+ 14.29,
  NOW(), NOW()),
 
 -- テックイノベーション
@@ -347,7 +347,7 @@ INSERT INTO financial_metrics (
  24.17, 13.18,
  2.54, 0.90,
  162000000, 134000000, 0.80,
- NULL, NULL, NULL,
+ NULL,
  NOW(), NOW()),
 ('f3333333-3333-3333-3333-333333333333', '03333333-3333-3333-3333-333333333333',
  400000000, 287.10,
@@ -355,7 +355,7 @@ INSERT INTO financial_metrics (
  30.63, 18.85,
  2.80, 0.68,
  298000000, 253000000, 0.37,
- 41.18, 86.67, 83.95,
+ 41.18,
  NOW(), NOW())
 ON CONFLICT (analysis_id, period_id) DO NOTHING;
 
