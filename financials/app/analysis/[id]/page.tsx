@@ -8,6 +8,7 @@ import { ArrowLeft, Download, FileText, Loader2, TrendingUp } from 'lucide-react
 import { FinancialDataTable } from '@/components/financial-data-table'
 import { FinancialCharts, generateChartsFromMetrics } from '@/components/financial-charts'
 import { FinancialMetricsTable } from '@/components/financial-metrics-table'
+import { TrendAnalysisCharts } from '@/components/trend-analysis-charts'
 import {
   calculateSalesCAGR,
   calculateOperatingIncomeCAGR,
@@ -248,6 +249,17 @@ export default function AnalysisDetailPage() {
         <div className="mb-6">
           <h2 className="text-2xl font-semibold mb-4">財務指標の推移</h2>
           <FinancialCharts charts={charts} />
+        </div>
+      )}
+
+      {/* トレンド分析（複数年度の詳細グラフ） */}
+      {analysis.periods.length >= 2 && (
+        <div className="mb-6">
+          <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+            <TrendingUp className="h-6 w-6" />
+            トレンド分析（複数年度比較）
+          </h2>
+          <TrendAnalysisCharts periods={analysis.periods} unit={amountUnit} />
         </div>
       )}
 
