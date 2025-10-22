@@ -13,41 +13,15 @@ DROP TABLE IF EXISTS financial_periods CASCADE;
 DROP TABLE IF EXISTS uploaded_files CASCADE;
 DROP TABLE IF EXISTS financial_analyses CASCADE;
 DROP TABLE IF EXISTS companies CASCADE;
-DROP TABLE IF EXISTS company_groups CASCADE;
-DROP TABLE IF EXISTS industries CASCADE;
 
 -- Drop functions
 DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;
 
 -- Now recreate everything from the initial schema
--- Industries Master Table
-CREATE TABLE industries (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(100) NOT NULL UNIQUE,
-  code VARCHAR(20),
-  description TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Company Groups
-CREATE TABLE company_groups (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(200) NOT NULL,
-  industry_id UUID REFERENCES industries(id) ON DELETE SET NULL,
-  password_hash VARCHAR(255),
-  description TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Companies
+-- Companies (simplified - no groups or industries)
 CREATE TABLE companies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(200) NOT NULL,
-  group_id UUID REFERENCES company_groups(id) ON DELETE SET NULL,
-  industry_id UUID REFERENCES industries(id) ON DELETE SET NULL,
-  password_hash VARCHAR(255),
   company_code VARCHAR(50),
   address TEXT,
   description TEXT,
@@ -217,8 +191,6 @@ CREATE TABLE access_logs (
 );
 
 -- Create Indexes
-CREATE INDEX idx_companies_group_id ON companies(group_id);
-CREATE INDEX idx_companies_industry_id ON companies(industry_id);
 CREATE INDEX idx_financial_analyses_company_id ON financial_analyses(company_id);
 CREATE INDEX idx_financial_analyses_created_by ON financial_analyses(created_by);
 CREATE INDEX idx_uploaded_files_analysis_id ON uploaded_files(analysis_id);
@@ -234,8 +206,6 @@ CREATE INDEX idx_access_logs_user_id ON access_logs(user_id);
 CREATE INDEX idx_access_logs_company_id ON access_logs(company_id);
 
 -- Enable Row Level Security (RLS)
-ALTER TABLE industries ENABLE ROW LEVEL SECURITY;
-ALTER TABLE company_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE financial_analyses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE uploaded_files ENABLE ROW LEVEL SECURITY;
@@ -249,8 +219,6 @@ ALTER TABLE analysis_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE access_logs ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies: Allow all operations for authenticated users
-CREATE POLICY "Allow all for authenticated users" ON industries FOR ALL TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for authenticated users" ON company_groups FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for authenticated users" ON companies FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for authenticated users" ON financial_analyses FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for authenticated users" ON uploaded_files FOR ALL TO authenticated USING (true) WITH CHECK (true);
@@ -264,8 +232,6 @@ CREATE POLICY "Allow all for authenticated users" ON analysis_comments FOR ALL T
 CREATE POLICY "Allow all for authenticated users" ON access_logs FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
 -- Allow anonymous access for development
-CREATE POLICY "Allow all for anon users" ON industries FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon users" ON company_groups FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon users" ON companies FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon users" ON financial_analyses FOR ALL TO anon USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for anon users" ON uploaded_files FOR ALL TO anon USING (true) WITH CHECK (true);
@@ -288,12 +254,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply Auto-update Triggers
-CREATE TRIGGER update_industries_updated_at BEFORE UPDATE ON industries
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_company_groups_updated_at BEFORE UPDATE ON company_groups
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
 CREATE TRIGGER update_companies_updated_at BEFORE UPDATE ON companies
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 

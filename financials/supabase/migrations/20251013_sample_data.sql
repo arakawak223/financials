@@ -1,36 +1,21 @@
 -- サンプルデータの投入
 -- 開発・テスト用のサンプルデータを投入します
 
--- 1. 業種データ
-INSERT INTO industries (id, name, code, description, created_at, updated_at) VALUES
-('11111111-1111-1111-1111-111111111111', '製造業', 'MFG', '製造業全般', NOW(), NOW()),
-('22222222-2222-2222-2222-222222222222', '卸売業', 'WHOLESALE', '卸売業全般', NOW(), NOW()),
-('33333333-3333-3333-3333-333333333333', '小売業', 'RETAIL', '小売業全般', NOW(), NOW()),
-('44444444-4444-4444-4444-444444444444', '情報通信業', 'IT', 'IT・情報通信業', NOW(), NOW()),
-('55555555-5555-5555-5555-555555555555', 'サービス業', 'SERVICE', 'サービス業全般', NOW(), NOW())
+-- 1. 企業データ（簡素化 - 業種・グループなし）
+INSERT INTO companies (id, name, company_code, description, created_at, updated_at) VALUES
+('c1111111-1111-1111-1111-111111111111', '株式会社サンプル製造', 'SAMPLE001', '自動車部品製造会社', NOW(), NOW()),
+('c2222222-2222-2222-2222-222222222222', '株式会社サンプル商事', 'SAMPLE002', '電子部品商社', NOW(), NOW()),
+('c3333333-3333-3333-3333-333333333333', '株式会社テックイノベーション', 'SAMPLE003', 'ITサービス企業', NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
--- 2. 企業グループデータ
-INSERT INTO company_groups (id, name, industry_id, description, created_at, updated_at) VALUES
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'サンプル製造グループ', '11111111-1111-1111-1111-111111111111', '製造業の企業グループ', NOW(), NOW()),
-('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'サンプル商社グループ', '22222222-2222-2222-2222-222222222222', '商社系企業グループ', NOW(), NOW())
-ON CONFLICT (id) DO NOTHING;
-
--- 3. 企業データ
-INSERT INTO companies (id, name, group_id, industry_id, company_code, description, created_at, updated_at) VALUES
-('c1111111-1111-1111-1111-111111111111', '株式会社サンプル製造', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'SAMPLE001', '自動車部品製造会社', NOW(), NOW()),
-('c2222222-2222-2222-2222-222222222222', '株式会社サンプル商事', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '22222222-2222-2222-2222-222222222222', 'SAMPLE002', '電子部品商社', NOW(), NOW()),
-('c3333333-3333-3333-3333-333333333333', '株式会社テックイノベーション', NULL, '44444444-4444-4444-4444-444444444444', 'SAMPLE003', 'ITサービス企業', NOW(), NOW())
-ON CONFLICT (id) DO NOTHING;
-
--- 4. 財務分析データ
+-- 2. 財務分析データ
 INSERT INTO financial_analyses (id, company_id, analysis_date, fiscal_year_start, fiscal_year_end, periods_count, status, notes, created_at, updated_at) VALUES
 ('f1111111-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111111', '2024-10-01', 2021, 2023, 3, 'completed', '直近3期の財務分析', NOW(), NOW()),
 ('f2222222-2222-2222-2222-222222222222', 'c2222222-2222-2222-2222-222222222222', '2024-09-15', 2021, 2023, 3, 'completed', '業績好調', NOW(), NOW()),
 ('f3333333-3333-3333-3333-333333333333', 'c3333333-3333-3333-3333-333333333333', '2024-10-10', 2022, 2023, 2, 'draft', '成長企業の財務分析', NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
--- 5. 財務期間データ
+-- 3. 財務期間データ
 INSERT INTO financial_periods (id, analysis_id, fiscal_year, period_start_date, period_end_date, created_at, updated_at) VALUES
 -- サンプル製造
 ('01111111-1111-1111-1111-111111111111', 'f1111111-1111-1111-1111-111111111111', 2021, '2021-04-01', '2022-03-31', NOW(), NOW()),
@@ -45,7 +30,7 @@ INSERT INTO financial_periods (id, analysis_id, fiscal_year, period_start_date, 
 ('03333333-3333-3333-3333-333333333333', 'f3333333-3333-3333-3333-333333333333', 2023, '2023-04-01', '2024-03-31', NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
--- 6. 貸借対照表項目 - サンプル製造
+-- 4. 貸借対照表項目 - サンプル製造
 INSERT INTO balance_sheet_items (
   period_id,
   cash_and_deposits, accounts_receivable, inventory,
@@ -89,7 +74,7 @@ INSERT INTO balance_sheet_items (
  NOW(), NOW())
 ON CONFLICT (period_id) DO NOTHING;
 
--- 7. 損益計算書項目 - サンプル製造
+-- 5. 損益計算書項目 - サンプル製造
 INSERT INTO profit_loss_items (
   period_id,
   net_sales, cost_of_sales, gross_profit,
@@ -267,7 +252,7 @@ INSERT INTO profit_loss_items (
  NOW(), NOW())
 ON CONFLICT (period_id) DO NOTHING;
 
--- 8. 手入力データ - サンプル製造
+-- 6. 手入力データ - サンプル製造
 INSERT INTO manual_inputs (period_id, input_type, amount, note, created_at, updated_at) VALUES
 ('01111111-1111-1111-1111-111111111111', 'depreciation', 28000000, '2021年度減価償却費', NOW(), NOW()),
 ('01111111-1111-1111-1111-111111111111', 'capex', 35000000, '2021年度設備投資', NOW(), NOW()),
@@ -289,7 +274,92 @@ INSERT INTO manual_inputs (period_id, input_type, amount, note, created_at, upda
 ('03333333-3333-3333-3333-333333333333', 'capex', 45000000, '2023年度設備投資', NOW(), NOW())
 ON CONFLICT DO NOTHING;
 
--- 9. 分析コメント
+-- 7. 財務指標データ
+-- サンプル製造 - 2021年度
+INSERT INTO financial_metrics (
+  analysis_id, period_id,
+  net_cash, current_ratio,
+  gross_profit_margin, operating_profit_margin, ebitda_margin,
+  roe, roa,
+  accounts_receivable_turnover_months, inventory_turnover_months,
+  ebitda, fcf, ebitda_to_interest_bearing_debt,
+  sales_growth_rate, operating_income_growth_rate, ebitda_growth_rate,
+  created_at, updated_at
+) VALUES
+-- 2021年度（成長率はNULL）
+('f1111111-1111-1111-1111-111111111111', '01111111-1111-1111-1111-111111111111',
+ -200000000, 135.42,
+ 30.00, 9.17, 11.50,
+ 18.92, 6.54,
+ 2.80, 2.57,
+ 138000000, 103000000, 2.54,
+ NULL, NULL, NULL,
+ NOW(), NOW()),
+-- 2022年度
+('f1111111-1111-1111-1111-111111111111', '01111111-2222-2222-2222-222222222222',
+ -140000000, 141.18,
+ 31.85, 11.11, 13.48,
+ 21.30, 8.38,
+ 2.84, 2.48,
+ 182000000, 130000000, 1.76,
+ 12.50, 36.36, 31.88,
+ NOW(), NOW()),
+-- 2023年度
+('f1111111-1111-1111-1111-111111111111', '01111111-3333-3333-3333-333333333333',
+ -70000000, 153.70,
+ 32.91, 13.29, 15.57,
+ 24.32, 10.95,
+ 2.89, 2.26,
+ 246000000, 188000000, 1.18,
+ 17.04, 40.00, 35.16,
+ NOW(), NOW()),
+
+-- サンプル商事
+('f2222222-2222-2222-2222-222222222222', '02222222-1111-1111-1111-111111111111',
+ -50000000, 163.89,
+ 12.50, 4.64, 5.29,
+ 16.15, 5.92,
+ 2.23, 1.67,
+ 148000000, 126000000, 2.23,
+ NULL, NULL, NULL,
+ NOW(), NOW()),
+('f2222222-2222-2222-2222-222222222222', '02222222-2222-2222-2222-222222222222',
+ -10000000, 173.33,
+ 13.02, 5.08, 5.71,
+ 17.22, 7.00,
+ 2.21, 1.58,
+ 180000000, 152000000, 1.72,
+ 12.50, 23.08, 21.62,
+ NOW(), NOW()),
+('f2222222-2222-2222-2222-222222222222', '02222222-3333-3333-3333-333333333333',
+ 90000000, 185.00,
+ 13.33, 5.56, 6.17,
+ 17.72, 8.00,
+ 2.20, 1.46,
+ 222000000, 187000000, 1.31,
+ 14.29, 25.00, 23.33,
+ NOW(), NOW()),
+
+-- テックイノベーション
+('f3333333-3333-3333-3333-333333333333', '03333333-2222-2222-2222-222222222222',
+ 290000000, 260.00,
+ 62.35, 17.65, 19.06,
+ 24.17, 13.18,
+ 2.54, 0.90,
+ 162000000, 134000000, 0.80,
+ NULL, NULL, NULL,
+ NOW(), NOW()),
+('f3333333-3333-3333-3333-333333333333', '03333333-3333-3333-3333-333333333333',
+ 400000000, 287.10,
+ 63.33, 23.33, 24.83,
+ 30.63, 18.85,
+ 2.80, 0.68,
+ 298000000, 253000000, 0.37,
+ 41.18, 86.67, 83.95,
+ NOW(), NOW())
+ON CONFLICT (analysis_id, period_id) DO NOTHING;
+
+-- 8. 分析コメント
 INSERT INTO analysis_comments (
   analysis_id, comment_type,
   ai_generated_text,

@@ -1,4 +1,3 @@
-
 # 財務分析アプリケーション デプロイガイド
 
 ## 📋 前提条件
@@ -33,7 +32,7 @@
 - ⚠️ 既存データはすべて削除されます
 
 **2つ目: サンプルデータ投入**
-- ファイル: `financials/supabase/migrations/20251012_sample_data.sql`
+- ファイル: `financials/supabase/migrations/20251013_sample_data.sql`
 - このファイルの全内容をコピー&ペースト
 - "Run"ボタンをクリック
 - 3社分のサンプルデータと財務分析が投入されます
