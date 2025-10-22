@@ -24,13 +24,23 @@ export async function GET(
     */
 
     // 分析データを取得
+    console.log('Fetching analysis with ID:', analysisId)
     const { data: analysis, error: analysisError } = await supabase
       .from('financial_analyses')
-      .select('*, companies(name, industry_id)')
+      .select('*, companies(name)')
       .eq('id', analysisId)
       .single()
 
-    if (analysisError || !analysis) {
+    if (analysisError) {
+      console.error('Analysis fetch error:', analysisError)
+      return NextResponse.json(
+        { error: 'Analysis not found', details: analysisError.message },
+        { status: 404 }
+      )
+    }
+
+    if (!analysis) {
+      console.error('Analysis is null')
       return NextResponse.json(
         { error: 'Analysis not found' },
         { status: 404 }

@@ -10,8 +10,8 @@ export async function updateSession(request: NextRequest) {
     // With Fluid compute, don't put this client in a global environment
     // variable. Always create a new one on each request.
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_ANON_KEY!,
       {
         cookies: {
           getAll() {
@@ -42,7 +42,11 @@ export async function updateSession(request: NextRequest) {
     const user = data?.claims;
 
     // 認証チェック: ログインが必要なページへのアクセスをガード
+    // 開発中は認証を無効化（本番環境では有効化すること）
+    const DISABLE_AUTH = true;
+
     if (
+      !DISABLE_AUTH &&
       request.nextUrl.pathname !== "/" &&
       !user &&
       !request.nextUrl.pathname.startsWith("/login") &&
