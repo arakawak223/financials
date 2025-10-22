@@ -129,11 +129,14 @@ function createMetricsSummarySlide(pptx: pptxgen, analysis: FinancialAnalysis, u
     ],
     [{ text: 'NetCash/NetDebt' }, { text: formatValue(metrics.netCash, '円', unit) }],
     [{ text: '流動比率' }, { text: formatValue(metrics.currentRatio, '%', unit) }],
+    [{ text: '自己資本比率' }, { text: formatValue(metrics.equityRatio, '%', unit) }],
+    [{ text: 'DEレシオ' }, { text: formatValue(metrics.debtEquityRatio, '倍', unit) }],
     [{ text: 'EBITDA' }, { text: formatValue(metrics.ebitda, '円', unit) }],
     [{ text: 'FCF' }, { text: formatValue(metrics.fcf, '円', unit) }],
     [{ text: '売上高成長率' }, { text: formatValue(metrics.salesGrowthRate, '%', unit) }],
     [{ text: '売上総利益率' }, { text: formatValue(metrics.grossProfitMargin, '%', unit) }],
     [{ text: '営業利益率' }, { text: formatValue(metrics.operatingProfitMargin, '%', unit) }],
+    [{ text: '当期純利益率' }, { text: formatValue(metrics.netProfitMargin, '%', unit) }],
     [{ text: 'ROE' }, { text: formatValue(metrics.roe, '%', unit) }],
     [{ text: 'ROA' }, { text: formatValue(metrics.roa, '%', unit) }],
   ]
@@ -218,6 +221,16 @@ function createProfitabilitySlide(pptx: pptxgen, analysis: FinancialAnalysis, _u
       labels: analysis.periods.map((p) => `${p.fiscalYear}年度`),
       values: analysis.periods.map((p) => p.metrics?.operatingProfitMargin || 0),
     },
+    {
+      name: '経常利益率',
+      labels: analysis.periods.map((p) => `${p.fiscalYear}年度`),
+      values: analysis.periods.map((p) => p.metrics?.ordinaryProfitMargin || 0),
+    },
+    {
+      name: '当期純利益率',
+      labels: analysis.periods.map((p) => `${p.fiscalYear}年度`),
+      values: analysis.periods.map((p) => p.metrics?.netProfitMargin || 0),
+    },
   ]
 
   slide.addChart(pptx.ChartType.line, chartData, {
@@ -265,6 +278,16 @@ function createSafetySlide(pptx: pptxgen, analysis: FinancialAnalysis, unit: Amo
       { text: '流動比率' },
       { text: formatValue(metrics.currentRatio, '%', unit) },
       { text: evaluateCurrentRatio(metrics.currentRatio) },
+    ],
+    [
+      { text: '自己資本比率' },
+      { text: formatValue(metrics.equityRatio, '%', unit) },
+      { text: evaluateEquityRatio(metrics.equityRatio) },
+    ],
+    [
+      { text: 'DEレシオ' },
+      { text: formatValue(metrics.debtEquityRatio, '倍', unit) },
+      { text: evaluateDebtEquityRatio(metrics.debtEquityRatio) },
     ],
     [
       { text: 'EBITDA対有利子負債比率' },
@@ -451,6 +474,28 @@ function evaluateDebtRatio(value: number | undefined): string {
   if (value <= 3) return '優良'
   if (value <= 5) return '良好'
   if (value <= 10) return '標準'
+  return '要改善'
+}
+
+/**
+ * 自己資本比率を評価
+ */
+function evaluateEquityRatio(value: number | undefined): string {
+  if (value === undefined) return '-'
+  if (value >= 50) return '優良'
+  if (value >= 40) return '良好'
+  if (value >= 30) return '標準'
+  return '要改善'
+}
+
+/**
+ * DEレシオを評価
+ */
+function evaluateDebtEquityRatio(value: number | undefined): string {
+  if (value === undefined) return '-'
+  if (value <= 0.5) return '優良'
+  if (value <= 1.0) return '良好'
+  if (value <= 2.0) return '標準'
   return '要改善'
 }
 

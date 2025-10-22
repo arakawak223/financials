@@ -124,12 +124,18 @@ function createMetricsSheet(workbook: ExcelJS.Workbook, analysis: FinancialAnaly
   sheet.addRow(['【流動性・安全性】'])
   addMetricRow(sheet, 'NetCash/NetDebt', analysis.periods, 'netCash', '円', unit)
   addMetricRow(sheet, '流動比率', analysis.periods, 'currentRatio', '%', unit)
+  addMetricRow(sheet, '自己資本比率', analysis.periods, 'equityRatio', '%', unit)
+  addMetricRow(sheet, '負債比率', analysis.periods, 'debtRatio', '%', unit)
+  addMetricRow(sheet, 'DEレシオ', analysis.periods, 'debtEquityRatio', '倍', unit)
   sheet.addRow([])
 
   // 効率性
   sheet.addRow(['【効率性】'])
   addMetricRow(sheet, '売掛金滞留月数', analysis.periods, 'receivablesTurnoverMonths', 'ヶ月', unit)
   addMetricRow(sheet, '棚卸資産滞留月数', analysis.periods, 'inventoryTurnoverMonths', 'ヶ月', unit)
+  addMetricRow(sheet, '総資本回転率', analysis.periods, 'totalAssetTurnover', '回', unit)
+  addMetricRow(sheet, '固定資産回転率', analysis.periods, 'fixedAssetTurnover', '回', unit)
+  addMetricRow(sheet, '棚卸資産回転率', analysis.periods, 'inventoryTurnover', '回', unit)
   sheet.addRow([])
 
   // 収益性
@@ -139,6 +145,8 @@ function createMetricsSheet(workbook: ExcelJS.Workbook, analysis: FinancialAnaly
   addMetricRow(sheet, '売上高成長率', analysis.periods, 'salesGrowthRate', '%', unit)
   addMetricRow(sheet, '売上総利益率', analysis.periods, 'grossProfitMargin', '%', unit)
   addMetricRow(sheet, '営業利益率', analysis.periods, 'operatingProfitMargin', '%', unit)
+  addMetricRow(sheet, '経常利益率', analysis.periods, 'ordinaryProfitMargin', '%', unit)
+  addMetricRow(sheet, '当期純利益率', analysis.periods, 'netProfitMargin', '%', unit)
   addMetricRow(sheet, 'EBITDA対売上高比率', analysis.periods, 'ebitdaMargin', '%', unit)
   sheet.addRow([])
 
@@ -240,6 +248,12 @@ function createChartDataSheet(workbook: ExcelJS.Workbook, analysis: FinancialAna
     { key: 'fcf', label: 'FCF', isAmount: true },
     { key: 'grossProfitMargin', label: '売上総利益率', isAmount: false },
     { key: 'operatingProfitMargin', label: '営業利益率', isAmount: false },
+    { key: 'ordinaryProfitMargin', label: '経常利益率', isAmount: false },
+    { key: 'netProfitMargin', label: '当期純利益率', isAmount: false },
+    { key: 'currentRatio', label: '流動比率', isAmount: false },
+    { key: 'equityRatio', label: '自己資本比率', isAmount: false },
+    { key: 'debtEquityRatio', label: 'DEレシオ', isAmount: false },
+    { key: 'totalAssetTurnover', label: '総資本回転率', isAmount: false },
     { key: 'roe', label: 'ROE', isAmount: false },
     { key: 'roa', label: 'ROA', isAmount: false },
   ]
