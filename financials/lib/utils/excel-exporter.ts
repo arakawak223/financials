@@ -125,7 +125,6 @@ function createMetricsSheet(workbook: ExcelJS.Workbook, analysis: FinancialAnaly
   addMetricRow(sheet, 'NetCash/NetDebt', analysis.periods, 'netCash', '円', unit)
   addMetricRow(sheet, '流動比率', analysis.periods, 'currentRatio', '%', unit)
   addMetricRow(sheet, '自己資本比率', analysis.periods, 'equityRatio', '%', unit)
-  addMetricRow(sheet, '負債比率', analysis.periods, 'debtRatio', '%', unit)
   addMetricRow(sheet, 'DEレシオ', analysis.periods, 'debtEquityRatio', '倍', unit)
   sheet.addRow([])
 

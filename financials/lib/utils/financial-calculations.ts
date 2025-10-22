@@ -240,34 +240,6 @@ export function calculateOperatingProfitMargin(data: PeriodFinancialData): numbe
 }
 
 /**
- * 経常利益率を計算
- * = 経常利益 ÷ 売上高 × 100
- */
-export function calculateOrdinaryProfitMargin(data: PeriodFinancialData): number | null {
-  const { profitLoss } = data
-  const ordinaryIncome = (profitLoss as DbProfitLoss).ordinary_income ?? profitLoss.ordinaryIncome
-  const sales = (profitLoss as DbProfitLoss).net_sales ?? profitLoss.netSales
-
-  if (!ordinaryIncome || !sales || sales === 0) return null
-
-  return (ordinaryIncome / sales) * 100
-}
-
-/**
- * 当期純利益率を計算
- * = 当期純利益 ÷ 売上高 × 100
- */
-export function calculateNetProfitMargin(data: PeriodFinancialData): number | null {
-  const { profitLoss } = data
-  const netIncome = (profitLoss as DbProfitLoss).net_income ?? profitLoss.netIncome
-  const sales = (profitLoss as DbProfitLoss).net_sales ?? profitLoss.netSales
-
-  if (!netIncome || !sales || sales === 0) return null
-
-  return (netIncome / sales) * 100
-}
-
-/**
  * EBITDA対売上高比率を計算
  * = EBITDA ÷ 売上高 × 100
  */
@@ -348,20 +320,6 @@ export function calculateEquityRatio(data: PeriodFinancialData): number | null {
 }
 
 /**
- * 負債比率を計算
- * = 総負債 ÷ 純資産 × 100
- */
-export function calculateDebtRatio(data: PeriodFinancialData): number | null {
-  const { balanceSheet } = data
-  const totalLiabilities = (balanceSheet as DbBalanceSheet).total_liabilities ?? balanceSheet.totalLiabilities
-  const netAssets = (balanceSheet as DbBalanceSheet).total_net_assets ?? balanceSheet.totalNetAssets
-
-  if (!totalLiabilities || !netAssets || netAssets === 0) return null
-
-  return (totalLiabilities / netAssets) * 100
-}
-
-/**
  * DEレシオ（負債資本倍率）を計算
  * = 有利子負債 ÷ 純資産
  */
@@ -429,7 +387,6 @@ export function calculateAllMetrics(
     netCash: calculateNetCash(currentPeriod) ?? undefined,
     currentRatio: calculateCurrentRatio(currentPeriod) ?? undefined,
     equityRatio: calculateEquityRatio(currentPeriod) ?? undefined,
-    debtRatio: calculateDebtRatio(currentPeriod) ?? undefined,
     debtEquityRatio: calculateDebtEquityRatio(currentPeriod) ?? undefined,
 
     // 効率性
@@ -447,8 +404,6 @@ export function calculateAllMetrics(
       : undefined,
     grossProfitMargin: calculateGrossProfitMargin(currentPeriod) ?? undefined,
     operatingProfitMargin: calculateOperatingProfitMargin(currentPeriod) ?? undefined,
-    ordinaryProfitMargin: calculateOrdinaryProfitMargin(currentPeriod) ?? undefined,
-    netProfitMargin: calculateNetProfitMargin(currentPeriod) ?? undefined,
     ebitdaMargin: calculateEbitdaMargin(currentPeriod) ?? undefined,
 
     // 財務健全性

@@ -63,7 +63,6 @@ export interface FinancialMetricsData {
   netCash?: number                          // NetCash/NetDebt
   currentRatio?: number                     // 流動比率（%）
   equityRatio?: number                      // 自己資本比率（%）
-  debtRatio?: number                        // 負債比率（%）
   debtEquityRatio?: number                  // DEレシオ（倍）
 
   // 効率性
@@ -81,8 +80,6 @@ export interface FinancialMetricsData {
   ebitdaGrowthRate?: number                 // EBITDA成長率（%）
   grossProfitMargin?: number                // 売上総利益率（%）
   operatingProfitMargin?: number            // 営業利益率（%）
-  ordinaryProfitMargin?: number             // 経常利益率（%）
-  netProfitMargin?: number                  // 当期純利益率（%）
   ebitdaMargin?: number                     // EBITDA対売上高比率（%）
 
   // 財務健全性

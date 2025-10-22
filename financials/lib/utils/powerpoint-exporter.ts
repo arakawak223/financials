@@ -136,7 +136,6 @@ function createMetricsSummarySlide(pptx: pptxgen, analysis: FinancialAnalysis, u
     [{ text: '売上高成長率' }, { text: formatValue(metrics.salesGrowthRate, '%', unit) }],
     [{ text: '売上総利益率' }, { text: formatValue(metrics.grossProfitMargin, '%', unit) }],
     [{ text: '営業利益率' }, { text: formatValue(metrics.operatingProfitMargin, '%', unit) }],
-    [{ text: '当期純利益率' }, { text: formatValue(metrics.netProfitMargin, '%', unit) }],
     [{ text: 'ROE' }, { text: formatValue(metrics.roe, '%', unit) }],
     [{ text: 'ROA' }, { text: formatValue(metrics.roa, '%', unit) }],
   ]
@@ -220,16 +219,6 @@ function createProfitabilitySlide(pptx: pptxgen, analysis: FinancialAnalysis, _u
       name: '営業利益率',
       labels: analysis.periods.map((p) => `${p.fiscalYear}年度`),
       values: analysis.periods.map((p) => p.metrics?.operatingProfitMargin || 0),
-    },
-    {
-      name: '経常利益率',
-      labels: analysis.periods.map((p) => `${p.fiscalYear}年度`),
-      values: analysis.periods.map((p) => p.metrics?.ordinaryProfitMargin || 0),
-    },
-    {
-      name: '当期純利益率',
-      labels: analysis.periods.map((p) => `${p.fiscalYear}年度`),
-      values: analysis.periods.map((p) => p.metrics?.netProfitMargin || 0),
     },
   ]
 

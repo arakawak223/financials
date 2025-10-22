@@ -146,8 +146,6 @@ export function TrendAnalysisCharts({ periods, unit }: TrendAnalysisChartsProps)
     fiscalYear: p.fiscalYear,
     売上総利益率: p.metrics?.grossProfitMargin || 0,
     営業利益率: p.metrics?.operatingProfitMargin || 0,
-    経常利益率: p.metrics?.ordinaryProfitMargin || 0,
-    当期純利益率: p.metrics?.netProfitMargin || 0,
   }))
 
   // 安全性指標の推移
@@ -316,8 +314,6 @@ export function TrendAnalysisCharts({ periods, unit }: TrendAnalysisChartsProps)
             <Legend />
             <Line type="monotone" dataKey="売上総利益率" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
             <Line type="monotone" dataKey="営業利益率" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} />
-            <Line type="monotone" dataKey="経常利益率" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 4 }} />
-            <Line type="monotone" dataKey="当期純利益率" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} />
           </LineChart>
         </ResponsiveContainer>
       </Card>
