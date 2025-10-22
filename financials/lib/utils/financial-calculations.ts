@@ -240,6 +240,34 @@ export function calculateOperatingProfitMargin(data: PeriodFinancialData): numbe
 }
 
 /**
+ * 経常利益率を計算
+ * = 経常利益 ÷ 売上高 × 100
+ */
+export function calculateOrdinaryProfitMargin(data: PeriodFinancialData): number | null {
+  const { profitLoss } = data
+  const ordinaryIncome = (profitLoss as DbProfitLoss).ordinary_income ?? profitLoss.ordinaryIncome
+  const sales = (profitLoss as DbProfitLoss).net_sales ?? profitLoss.netSales
+
+  if (!ordinaryIncome || !sales || sales === 0) return null
+
+  return (ordinaryIncome / sales) * 100
+}
+
+/**
+ * 当期純利益率を計算
+ * = 当期純利益 ÷ 売上高 × 100
+ */
+export function calculateNetProfitMargin(data: PeriodFinancialData): number | null {
+  const { profitLoss } = data
+  const netIncome = (profitLoss as DbProfitLoss).net_income ?? profitLoss.netIncome
+  const sales = (profitLoss as DbProfitLoss).net_sales ?? profitLoss.netSales
+
+  if (!netIncome || !sales || sales === 0) return null
+
+  return (netIncome / sales) * 100
+}
+
+/**
  * EBITDA対売上高比率を計算
  * = EBITDA ÷ 売上高 × 100
  */
@@ -306,6 +334,90 @@ export function calculateRoa(data: PeriodFinancialData): number | null {
 }
 
 /**
+ * 自己資本比率を計算
+ * = 純資産 ÷ 総資産 × 100
+ */
+export function calculateEquityRatio(data: PeriodFinancialData): number | null {
+  const { balanceSheet } = data
+  const netAssets = (balanceSheet as DbBalanceSheet).total_net_assets ?? balanceSheet.totalNetAssets
+  const totalAssets = (balanceSheet as DbBalanceSheet).total_assets ?? balanceSheet.totalAssets
+
+  if (!netAssets || !totalAssets || totalAssets === 0) return null
+
+  return (netAssets / totalAssets) * 100
+}
+
+/**
+ * 負債比率を計算
+ * = 総負債 ÷ 純資産 × 100
+ */
+export function calculateDebtRatio(data: PeriodFinancialData): number | null {
+  const { balanceSheet } = data
+  const totalLiabilities = (balanceSheet as DbBalanceSheet).total_liabilities ?? balanceSheet.totalLiabilities
+  const netAssets = (balanceSheet as DbBalanceSheet).total_net_assets ?? balanceSheet.totalNetAssets
+
+  if (!totalLiabilities || !netAssets || netAssets === 0) return null
+
+  return (totalLiabilities / netAssets) * 100
+}
+
+/**
+ * DEレシオ（負債資本倍率）を計算
+ * = 有利子負債 ÷ 純資産
+ */
+export function calculateDebtEquityRatio(data: PeriodFinancialData): number | null {
+  const { balanceSheet } = data
+  const interestBearingDebt = calculateInterestBearingDebt(data)
+  const netAssets = (balanceSheet as DbBalanceSheet).total_net_assets ?? balanceSheet.totalNetAssets
+
+  if (!interestBearingDebt || !netAssets || netAssets === 0) return null
+
+  return interestBearingDebt / netAssets
+}
+
+/**
+ * 総資本回転率を計算
+ * = 売上高 ÷ 総資産（回）
+ */
+export function calculateTotalAssetTurnover(data: PeriodFinancialData): number | null {
+  const { profitLoss, balanceSheet } = data
+  const sales = (profitLoss as DbProfitLoss).net_sales ?? profitLoss.netSales
+  const totalAssets = (balanceSheet as DbBalanceSheet).total_assets ?? balanceSheet.totalAssets
+
+  if (!sales || !totalAssets || totalAssets === 0) return null
+
+  return sales / totalAssets
+}
+
+/**
+ * 固定資産回転率を計算
+ * = 売上高 ÷ 固定資産（回）
+ */
+export function calculateFixedAssetTurnover(data: PeriodFinancialData): number | null {
+  const { profitLoss, balanceSheet } = data
+  const sales = (profitLoss as DbProfitLoss).net_sales ?? profitLoss.netSales
+  const fixedAssets = (balanceSheet as DbBalanceSheet).fixed_assets_total ?? balanceSheet.totalFixedAssets
+
+  if (!sales || !fixedAssets || fixedAssets === 0) return null
+
+  return sales / fixedAssets
+}
+
+/**
+ * 棚卸資産回転率を計算
+ * = 売上原価 ÷ 棚卸資産（回）
+ */
+export function calculateInventoryTurnover(data: PeriodFinancialData): number | null {
+  const { profitLoss, balanceSheet } = data
+  const costOfSales = (profitLoss as DbProfitLoss).cost_of_sales ?? profitLoss.costOfSales
+  const inventory = (balanceSheet as DbBalanceSheet).inventory ?? balanceSheet.inventory
+
+  if (!costOfSales || !inventory || inventory === 0) return null
+
+  return costOfSales / inventory
+}
+
+/**
  * すべての財務指標を一括計算
  */
 export function calculateAllMetrics(
@@ -316,10 +428,16 @@ export function calculateAllMetrics(
     // 流動性・安全性
     netCash: calculateNetCash(currentPeriod) ?? undefined,
     currentRatio: calculateCurrentRatio(currentPeriod) ?? undefined,
+    equityRatio: calculateEquityRatio(currentPeriod) ?? undefined,
+    debtRatio: calculateDebtRatio(currentPeriod) ?? undefined,
+    debtEquityRatio: calculateDebtEquityRatio(currentPeriod) ?? undefined,
 
     // 効率性
     receivablesTurnoverMonths: calculateReceivablesTurnoverMonths(currentPeriod) ?? undefined,
     inventoryTurnoverMonths: calculateInventoryTurnoverMonths(currentPeriod) ?? undefined,
+    totalAssetTurnover: calculateTotalAssetTurnover(currentPeriod) ?? undefined,
+    fixedAssetTurnover: calculateFixedAssetTurnover(currentPeriod) ?? undefined,
+    inventoryTurnover: calculateInventoryTurnover(currentPeriod) ?? undefined,
 
     // 収益性
     ebitda: calculateEbitda(currentPeriod) ?? undefined,
@@ -329,6 +447,8 @@ export function calculateAllMetrics(
       : undefined,
     grossProfitMargin: calculateGrossProfitMargin(currentPeriod) ?? undefined,
     operatingProfitMargin: calculateOperatingProfitMargin(currentPeriod) ?? undefined,
+    ordinaryProfitMargin: calculateOrdinaryProfitMargin(currentPeriod) ?? undefined,
+    netProfitMargin: calculateNetProfitMargin(currentPeriod) ?? undefined,
     ebitdaMargin: calculateEbitdaMargin(currentPeriod) ?? undefined,
 
     // 財務健全性

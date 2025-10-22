@@ -61,28 +61,36 @@ export type CommentType =
 export interface FinancialMetricsData {
   // 流動性・安全性
   netCash?: number                          // NetCash/NetDebt
-  currentRatio?: number                     // 流動比率
+  currentRatio?: number                     // 流動比率（%）
+  equityRatio?: number                      // 自己資本比率（%）
+  debtRatio?: number                        // 負債比率（%）
+  debtEquityRatio?: number                  // DEレシオ（倍）
 
   // 効率性
   receivablesTurnoverMonths?: number        // 売掛金滞留月数
   inventoryTurnoverMonths?: number          // 棚卸資産滞留月数
+  totalAssetTurnover?: number               // 総資本回転率（回）
+  fixedAssetTurnover?: number               // 固定資産回転率（回）
+  inventoryTurnover?: number                // 棚卸資産回転率（回）
 
   // 収益性
   ebitda?: number                           // EBITDA
   fcf?: number                              // フリーキャッシュフロー
-  salesGrowthRate?: number                  // 売上高成長率
-  operatingIncomeGrowthRate?: number        // 営業利益成長率
-  ebitdaGrowthRate?: number                 // EBITDA成長率
-  grossProfitMargin?: number                // 売上総利益率
-  operatingProfitMargin?: number            // 営業利益率
-  ebitdaMargin?: number                     // EBITDA対売上高比率
+  salesGrowthRate?: number                  // 売上高成長率（%）
+  operatingIncomeGrowthRate?: number        // 営業利益成長率（%）
+  ebitdaGrowthRate?: number                 // EBITDA成長率（%）
+  grossProfitMargin?: number                // 売上総利益率（%）
+  operatingProfitMargin?: number            // 営業利益率（%）
+  ordinaryProfitMargin?: number             // 経常利益率（%）
+  netProfitMargin?: number                  // 当期純利益率（%）
+  ebitdaMargin?: number                     // EBITDA対売上高比率（%）
 
   // 財務健全性
   ebitdaToInterestBearingDebt?: number      // EBITDA対有利子負債比率
 
   // 資本効率
-  roe?: number                              // ROE
-  roa?: number                              // ROA
+  roe?: number                              // ROE（%）
+  roa?: number                              // ROA（%）
 }
 
 // ========================================
