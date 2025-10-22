@@ -10,13 +10,17 @@
 
 ## 🚀 オプション1: Supabase Cloud + Vercel（推奨）
 
+**✅ 本番環境用の設定は完了済みです！**
+
+最新のコミット（`15a409a`）で本番環境用の設定に変更済みのため、すぐにデプロイ可能です。
+
 ### ステップ1: Supabase Cloudプロジェクト作成
 
 1. [Supabase](https://supabase.com)にログイン
 2. 「New Project」をクリック
 3. プロジェクト情報を入力:
    - Name: `financials-prod`
-   - Database Password: 強力なパスワード
+   - Database Password: 強力なパスワード（メモしておく）
    - Region: 近い地域（例: Tokyo）
 4. プロジェクトの準備完了を待つ（2-3分）
 
@@ -44,101 +48,40 @@
    - Project URL: `https://xxxxx.supabase.co`
    - anon public key: `eyJhbGci...`
 
-### ステップ4: 本番用の設定を準備
-
-プロキシを削除して、直接Supabase Cloudに接続する設定に変更します。
-
-#### 4-1. プロキシAPIを削除
+### ステップ4: GitHubにプッシュ
 
 ```bash
-rm -rf app/api/supabase
-```
-
-#### 4-2. Supabaseクライアント設定を元に戻す
-
-`lib/supabase/client.ts`:
-```typescript
-import { createBrowserClient } from "@supabase/ssr";
-
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
-}
-```
-
-`lib/supabase/server.ts`:
-```typescript
-export async function createClient() {
-  const cookieStore = await cookies();
-
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
-            );
-          } catch {
-            // Server Component error - can be ignored
-          }
-        },
-      },
-    },
-  );
-}
-```
-
-`lib/supabase/middleware.ts`:
-```typescript
-// 認証チェックのコメントアウトを解除
-const { data } = await supabase.auth.getClaims();
-const user = data?.claims;
-
-if (
-  request.nextUrl.pathname !== "/" &&
-  !user &&
-  !request.nextUrl.pathname.startsWith("/login") &&
-  !request.nextUrl.pathname.startsWith("/auth")
-) {
-  const url = request.nextUrl.clone();
-  url.pathname = "/auth/login";
-  return NextResponse.redirect(url);
-}
-```
-
-### ステップ5: Vercelにデプロイ
-
-#### GitHubにプッシュ
-
-```bash
-git add .
-git commit -m "本番環境用の設定に変更"
 git push origin main
 ```
 
-#### Vercelでデプロイ
+### ステップ5: Vercelでデプロイ
 
 1. [Vercel](https://vercel.com)にログイン
 2. 「New Project」をクリック
 3. GitHubリポジトリを選択: `financials`
-4. ルートディレクトリを設定: `financials`
-5. 環境変数を追加:
+4. **Framework Preset**: Next.js（自動検出されます）
+5. **Root Directory**: `financials`（重要！）
+6. 環境変数を追加:
    ```
    NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
    OPENAI_API_KEY=your-openai-api-key (オプション)
    ```
-6. 「Deploy」をクリック
+7. 「Deploy」をクリック
 
-### ステップ6: デプロイ完了
+### ステップ6: Supabaseの認証設定
+
+デプロイが完了したら、VercelのURLを確認し、Supabaseに設定します：
+
+1. Supabase Dashboard → Authentication → URL Configuration
+2. 以下を設定:
+   - **Site URL**: `https://your-app.vercel.app`
+   - **Redirect URLs**: 以下を追加
+     - `https://your-app.vercel.app/**`
+     - `https://your-app.vercel.app/auth/callback`
+     - `https://your-app.vercel.app/auth/confirm`
+
+### ステップ7: デプロイ完了
 
 数分後、デプロイが完了します。Vercelが提供するURLでアクセス可能になります。
 
