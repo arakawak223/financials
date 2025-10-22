@@ -10,11 +10,6 @@ export function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  console.log('=== Supabase Client Debug ===');
-  console.log('ENV NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl);
-  console.log('ENV NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseKey ? 'SET' : 'NOT SET');
-  console.log('window.location.origin:', window.location.origin);
-
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Supabase environment variables are not set');
   }
@@ -22,16 +17,19 @@ export function createClient() {
   // 実行時に完全なURLを構築
   let fullUrl: string;
 
-  if (supabaseUrl.startsWith('http://') || supabaseUrl.startsWith('https://')) {
-    // 完全なURLの場合、localhostを現在のオリジンに置き換える
+  // Supabase CloudのURLの場合はそのまま使用（本番環境）
+  if (supabaseUrl.includes('.supabase.co')) {
+    fullUrl = supabaseUrl;
+  }
+  // 完全なURLの場合（Codespaces等）
+  else if (supabaseUrl.startsWith('http://') || supabaseUrl.startsWith('https://')) {
+    // localhostを現在のオリジンに置き換える（Codespaces対応）
     fullUrl = supabaseUrl.replace('http://localhost:3000', window.location.origin);
-  } else {
-    // 相対URLの場合は現在のオリジンを付与
+  }
+  // 相対URLの場合（/api/supabase等）
+  else {
     fullUrl = `${window.location.origin}${supabaseUrl}`;
   }
-
-  console.log('Final Supabase URL:', fullUrl);
-  console.log('============================');
 
   return createBrowserClient(fullUrl, supabaseKey);
 }
