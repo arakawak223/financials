@@ -7,7 +7,8 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
 
-    // 認証チェック
+    // 認証チェック（開発中は一時的に無効化）
+    /*
     const {
       data: { user },
       error: authError,
@@ -16,6 +17,7 @@ export async function POST(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    */
 
     // フォームデータを取得
     const formData = await request.formData()
@@ -57,9 +59,9 @@ export async function POST(request: NextRequest) {
         fiscal_year: fiscalYear,
         file_name: file.name,
         file_path: uploadData.path,
-        file_size: file.size,
-        mime_type: file.type,
-        ocr_status: 'pending',
+        file_size_bytes: file.size,
+        ocr_applied: false,
+        uploaded_by: null, // 認証無効化中はnull
       })
       .select()
       .single()
