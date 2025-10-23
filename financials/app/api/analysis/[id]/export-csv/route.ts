@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { convertFinancialDataToCSV, generateCSVTemplate } from '@/lib/utils/csv-utils'
