@@ -26,7 +26,10 @@ export async function POST(
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    const filename = `${analysisId}/${fiscalYear}/${fileType}/${randomUUID()}_${file.name}`
+    // ファイル名をサニタイズ（日本語や特殊文字を除去）
+    const fileExtension = file.name.split('.').pop() || 'pdf'
+    const sanitizedFileName = `${randomUUID()}.${fileExtension}`
+    const filename = `${analysisId}/${fiscalYear}/${fileType}/${sanitizedFileName}`
 
     // Supabase Storageにアップロード
     const { data: uploadData, error: storageError } = await supabase
