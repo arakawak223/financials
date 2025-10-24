@@ -1,8 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { writeFile } from 'fs/promises'
-import { join } from 'path'
 import { randomUUID } from 'crypto'
 
 export async function POST(
@@ -24,23 +22,34 @@ export async function POST(
       return NextResponse.json({ error: 'ファイルが見つかりません' }, { status: 400 })
     }
 
-    // ファイルを一時保存（本番環境ではS3やSupabase Storageを使用）
+    // ファイルをSupabase Storageにアップロード
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    const filename = `${randomUUID()}_${file.name}`
-    const filepath = join(process.cwd(), 'uploads', filename)
+    const filename = `${analysisId}/${fiscalYear}/${fileType}/${randomUUID()}_${file.name}`
 
-    // アップロードディレクトリがない場合は作成
-    try {
-      await writeFile(filepath, buffer)
-    } catch (error) {
-      console.error('File write error:', error)
-      // ディレクトリが存在しない場合は作成
-      const { mkdir } = await import('fs/promises')
-      await mkdir(join(process.cwd(), 'uploads'), { recursive: true })
-      await writeFile(filepath, buffer)
+    // Supabase Storageにアップロード
+    const { data: uploadData, error: storageError } = await supabase
+      .storage
+      .from('financial-documents')
+      .upload(filename, buffer, {
+        contentType: file.type,
+        upsert: false,
+      })
+
+    if (storageError) {
+      console.error('Storage upload error:', storageError)
+      return NextResponse.json(
+        { error: 'ファイルのアップロードに失敗しました: ' + storageError.message },
+        { status: 500 }
+      )
     }
+
+    // 公開URLを取得
+    const { data: urlData } = supabase
+      .storage
+      .from('financial-documents')
+      .getPublicUrl(filename)
 
     // データベースにファイル情報を保存
     const { data: uploadedFile, error: uploadError } = await supabase
@@ -50,7 +59,8 @@ export async function POST(
         file_type: fileType,
         fiscal_year: fiscalYear,
         file_name: file.name,
-        file_path: filepath,
+        file_path: uploadData.path,
+        file_url: urlData.publicUrl,
         file_size: file.size,
         mime_type: file.type,
         ocr_status: 'pending',
@@ -60,6 +70,8 @@ export async function POST(
 
     if (uploadError) {
       console.error('Database error:', uploadError)
+      // アップロードしたファイルを削除
+      await supabase.storage.from('financial-documents').remove([filename])
       return NextResponse.json(
         { error: 'ファイル情報の保存に失敗しました' },
         { status: 500 }

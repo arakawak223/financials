@@ -41,6 +41,49 @@
 - "Run"ボタンをクリック
 - 3社分のサンプルデータと財務分析が投入されます
 
+**3つ目: ストレージ対応カラムの追加**
+- ファイル: `financials/supabase/migrations/20251024_add_storage_fields.sql`
+- このファイルの全内容をコピー&ペースト
+- "Run"ボタンをクリック
+- PDF アップロード用のカラムが追加されます
+
+### ステップ2.5: Supabase Storage設定
+
+PDFファイルのアップロード機能のために、Storageバケットを作成します：
+
+1. Supabase Dashboard → Storage を開く
+2. 「New Bucket」をクリック
+3. バケット情報を入力:
+   - Name: `financial-documents`
+   - Public bucket: ✅ チェックを入れる（ファイルの公開アクセス用）
+4. 「Create bucket」をクリック
+
+**ポリシー設定:**
+1. 作成したバケット `financial-documents` をクリック
+2. 「Policies」タブを開く
+3. 以下のポリシーを追加:
+
+**アップロード許可:**
+```sql
+CREATE POLICY "Allow authenticated upload" ON storage.objects
+FOR INSERT TO authenticated
+WITH CHECK (bucket_id = 'financial-documents');
+```
+
+**読み取り許可:**
+```sql
+CREATE POLICY "Allow public read" ON storage.objects
+FOR SELECT TO public
+USING (bucket_id = 'financial-documents');
+```
+
+**削除許可:**
+```sql
+CREATE POLICY "Allow authenticated delete" ON storage.objects
+FOR DELETE TO authenticated
+USING (bucket_id = 'financial-documents');
+```
+
 ### ステップ3: Supabase接続情報を取得
 
 1. Supabase Dashboard → Settings → API
