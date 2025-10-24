@@ -5,7 +5,7 @@ import type { PdfExtractResult, FileType, AccountDetail, AccountType } from '../
 
 // PDF.jsワーカーの設定
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
 }
 
 /**

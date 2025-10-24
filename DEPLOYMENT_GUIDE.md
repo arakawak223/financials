@@ -84,6 +84,18 @@ FOR DELETE TO authenticated
 USING (bucket_id = 'financial-documents');
 ```
 
+**開発用：認証なしアップロード（オプション）:**
+```sql
+-- 認証を無効化している場合のみ必要
+CREATE POLICY "Allow anonymous upload for development" ON storage.objects
+FOR INSERT TO anon
+WITH CHECK (bucket_id = 'financial-documents');
+```
+
+⚠️ **注意**: 開発用ポリシーは本番環境では削除してください！
+
+詳細な手順は `STORAGE_SETUP.md` を参照してください。
+
 ### ステップ3: Supabase接続情報を取得
 
 1. Supabase Dashboard → Settings → API
