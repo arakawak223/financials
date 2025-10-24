@@ -167,69 +167,147 @@ function parseFinancialStatement(
   const errors: string[] = []
   const warnings: string[] = []
 
-  // 正規表現パターンで金額を抽出
-  // 実際の会計ソフトのフォーマットに応じて調整が必要
+  console.log('=== PDF抽出開始 ===')
+  console.log('抽出されたテキスト（最初の500文字）:', text.substring(0, 500))
 
   const balanceSheet: Record<string, number> = {}
   const profitLoss: Record<string, number> = {}
 
-  // BS項目の抽出例
+  // 弥生会計対応：複数のパターンを試す
+  // パターン1: コロン区切り（例: 現金預金：10,000,000）
+  // パターン2: スペース/タブ区切り（例: 現金預金    10,000,000）
+  // パターン3: 改行を含む（例: 現金預金\n10,000,000）
+
   const patterns = {
-    // 資産
-    cashAndDeposits: /現金.*?預金.*?[：:]\s*([\d,]+)/i,
-    securities: /有価証券.*?[：:]\s*([\d,]+)/i,
-    accountsReceivable: /売掛金.*?[：:]\s*([\d,]+)/i,
-    inventory: /棚卸資産.*?[：:]\s*([\d,]+)/i,
-    totalCurrentAssets: /流動資産.*?合計.*?[：:]\s*([\d,]+)/i,
-    land: /土地.*?[：:]\s*([\d,]+)/i,
-    totalAssets: /資産.*?合計.*?[：:]\s*([\d,]+)/i,
+    // 資産（複数パターンを配列で定義）
+    cash_and_deposits: [
+      /現金.*?預金[：:\s]+(\d[\d,]+)/i,
+      /現金[：:\s]+(\d[\d,]+)/i,
+    ],
+    accounts_receivable: [
+      /売掛金[：:\s]+(\d[\d,]+)/i,
+      /受取手形.*?売掛金[：:\s]+(\d[\d,]+)/i,
+    ],
+    inventory: [
+      /棚卸資産[：:\s]+(\d[\d,]+)/i,
+      /商品[：:\s]+(\d[\d,]+)/i,
+    ],
+    current_assets_total: [
+      /流動資産.*?合計[：:\s]+(\d[\d,]+)/i,
+      /流動資産[：:\s]+(\d[\d,]+)/i,
+    ],
+    tangible_fixed_assets: [
+      /有形固定資産[：:\s]+(\d[\d,]+)/i,
+      /建物.*?構築物[：:\s]+(\d[\d,]+)/i,
+    ],
+    total_assets: [
+      /資産.*?合計[：:\s]+(\d[\d,]+)/i,
+      /資産の部.*?合計[：:\s]+(\d[\d,]+)/i,
+    ],
 
     // 負債
-    shortTermBorrowings: /短期.*?借入金.*?[：:]\s*([\d,]+)/i,
-    accountsPayable: /買掛金.*?[：:]\s*([\d,]+)/i,
-    longTermBorrowings: /長期.*?借入金.*?[：:]\s*([\d,]+)/i,
-    bondsPayable: /社債.*?[：:]\s*([\d,]+)/i,
-    totalLiabilities: /負債.*?合計.*?[：:]\s*([\d,]+)/i,
+    accounts_payable: [
+      /買掛金[：:\s]+(\d[\d,]+)/i,
+      /支払手形.*?買掛金[：:\s]+(\d[\d,]+)/i,
+    ],
+    short_term_borrowings: [
+      /短期借入金[：:\s]+(\d[\d,]+)/i,
+      /短期.*?借入[：:\s]+(\d[\d,]+)/i,
+    ],
+    current_liabilities_total: [
+      /流動負債.*?合計[：:\s]+(\d[\d,]+)/i,
+      /流動負債[：:\s]+(\d[\d,]+)/i,
+    ],
+    long_term_borrowings: [
+      /長期借入金[：:\s]+(\d[\d,]+)/i,
+      /長期.*?借入[：:\s]+(\d[\d,]+)/i,
+    ],
+    total_liabilities: [
+      /負債.*?合計[：:\s]+(\d[\d,]+)/i,
+      /負債の部.*?合計[：:\s]+(\d[\d,]+)/i,
+    ],
 
     // 純資産
-    totalNetAssets: /純資産.*?合計.*?[：:]\s*([\d,]+)/i,
+    total_net_assets: [
+      /純資産.*?合計[：:\s]+(\d[\d,]+)/i,
+      /純資産の部.*?合計[：:\s]+(\d[\d,]+)/i,
+      /資本.*?合計[：:\s]+(\d[\d,]+)/i,
+    ],
   }
 
-  // PL項目の抽出例
+  // PL項目（弥生会計フォーマット対応）
   const plPatterns = {
-    netSales: /売上.*?高.*?[：:]\s*([\d,]+)/i,
-    costOfSales: /売上.*?原価.*?[：:]\s*([\d,]+)/i,
-    grossProfit: /売上.*?総利益.*?[：:]\s*([\d,]+)/i,
-    operatingIncome: /営業.*?利益.*?[：:]\s*([\d,]+)/i,
-    ordinaryIncome: /経常.*?利益.*?[：:]\s*([\d,]+)/i,
-    netIncome: /当期.*?純利益.*?[：:]\s*([\d,]+)/i,
+    net_sales: [
+      /売上.*?高[：:\s]+(\d[\d,]+)/i,
+      /売上[：:\s]+(\d[\d,]+)/i,
+    ],
+    cost_of_sales: [
+      /売上原価[：:\s]+(\d[\d,]+)/i,
+      /売上.*?原価[：:\s]+(\d[\d,]+)/i,
+    ],
+    gross_profit: [
+      /売上総利益[：:\s]+(\d[\d,]+)/i,
+      /売上.*?総利益[：:\s]+(\d[\d,]+)/i,
+    ],
+    operating_income: [
+      /営業利益[：:\s]+(\d[\d,]+)/i,
+      /営業.*?利益[：:\s]+(\d[\d,]+)/i,
+    ],
+    ordinary_income: [
+      /経常利益[：:\s]+(\d[\d,]+)/i,
+      /経常.*?利益[：:\s]+(\d[\d,]+)/i,
+    ],
+    net_income: [
+      /当期純利益[：:\s]+(\d[\d,]+)/i,
+      /当期.*?純利益[：:\s]+(\d[\d,]+)/i,
+      /税引後.*?当期純利益[：:\s]+(\d[\d,]+)/i,
+    ],
   }
 
-  // BS項目を抽出
-  for (const [key, pattern] of Object.entries(patterns)) {
-    const match = text.match(pattern)
-    if (match) {
-      const value = parseFloat(match[1].replace(/,/g, ''))
-      if (!isNaN(value)) {
-        balanceSheet[key] = value
+  // BS項目を抽出（複数パターンを試す）
+  for (const [key, patternArray] of Object.entries(patterns)) {
+    let found = false
+    for (const pattern of patternArray) {
+      const match = text.match(pattern)
+      if (match) {
+        const value = parseFloat(match[1].replace(/,/g, ''))
+        if (!isNaN(value) && value > 0) {
+          balanceSheet[key] = value
+          console.log(`✅ ${key}: ${value.toLocaleString()}`)
+          found = true
+          break
+        }
       }
-    } else {
+    }
+    if (!found) {
+      console.log(`⚠️  ${key}が見つかりませんでした`)
       warnings.push(`${key}が見つかりませんでした`)
     }
   }
 
-  // PL項目を抽出
-  for (const [key, pattern] of Object.entries(plPatterns)) {
-    const match = text.match(pattern)
-    if (match) {
-      const value = parseFloat(match[1].replace(/,/g, ''))
-      if (!isNaN(value)) {
-        profitLoss[key] = value
+  // PL項目を抽出（複数パターンを試す）
+  for (const [key, patternArray] of Object.entries(plPatterns)) {
+    let found = false
+    for (const pattern of patternArray) {
+      const match = text.match(pattern)
+      if (match) {
+        const value = parseFloat(match[1].replace(/,/g, ''))
+        if (!isNaN(value) && value > 0) {
+          profitLoss[key] = value
+          console.log(`✅ ${key}: ${value.toLocaleString()}`)
+          found = true
+          break
+        }
       }
-    } else {
+    }
+    if (!found) {
+      console.log(`⚠️  ${key}が見つかりませんでした`)
       warnings.push(`${key}が見つかりませんでした`)
     }
   }
+
+  console.log('=== BS抽出結果 ===', balanceSheet)
+  console.log('=== PL抽出結果 ===', profitLoss)
 
   return {
     balanceSheet,
