@@ -85,12 +85,21 @@ export async function GET(
         ? p.financial_metrics[0]
         : null
 
+      // balance_sheet_itemsとprofit_loss_itemsは配列で返されるため、最初の要素を取得
+      const balanceSheetData = Array.isArray(p.balance_sheet_items) && p.balance_sheet_items.length > 0
+        ? p.balance_sheet_items[0]
+        : {}
+
+      const profitLossData = Array.isArray(p.profit_loss_items) && p.profit_loss_items.length > 0
+        ? p.profit_loss_items[0]
+        : {}
+
       return {
         fiscalYear: p.fiscal_year,
         periodStartDate: p.period_start_date ? new Date(p.period_start_date) : undefined,
         periodEndDate: p.period_end_date ? new Date(p.period_end_date) : undefined,
-        balanceSheet: p.balance_sheet_items || {},
-        profitLoss: p.profit_loss_items || {},
+        balanceSheet: balanceSheetData,
+        profitLoss: profitLossData,
         manualInputs: {
           depreciation: Array.isArray(p.manual_inputs)
             ? p.manual_inputs.find((m: { input_type: string; amount?: number }) => m.input_type === 'depreciation')?.amount
