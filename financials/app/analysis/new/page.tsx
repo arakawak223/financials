@@ -13,6 +13,8 @@ type Step = 'company' | 'period' | 'upload' | 'review'
 export default function NewAnalysisPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState<Step>('company')
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [processingStatus, setProcessingStatus] = useState('')
 
   // フォームデータ
   const [companyName, setCompanyName] = useState('')
@@ -61,8 +63,11 @@ export default function NewAnalysisPage() {
   }
 
   const handleSubmit = async () => {
+    setIsProcessing(true)
+
     try {
       // 分析を作成
+      setProcessingStatus('分析を作成中...')
       const createResponse = await fetch('/api/analysis/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -80,25 +85,65 @@ export default function NewAnalysisPage() {
 
       const { analysisId } = await createResponse.json()
 
-      // PDFファイルを処理
-      for (const fileInfo of uploadedFiles) {
+      // PDFファイルをアップロードして処理
+      for (let i = 0; i < uploadedFiles.length; i++) {
+        const fileInfo = uploadedFiles[i]
+        setProcessingStatus(`PDFを処理中... (${i + 1}/${uploadedFiles.length}): ${fileInfo.file.name}`)
+
+        // 1. PDFをStorageにアップロード
         const formData = new FormData()
         formData.append('file', fileInfo.file)
-        formData.append('analysisId', analysisId)
         formData.append('fileType', fileInfo.fileType)
         formData.append('fiscalYear', fileInfo.fiscalYear.toString())
 
-        const pdfResponse = await fetch('/api/pdf/process', {
+        const uploadResponse = await fetch(`/api/analysis/${analysisId}/upload-pdf`, {
           method: 'POST',
           body: formData,
         })
 
-        if (!pdfResponse.ok) {
-          console.error(`Failed to process ${fileInfo.file.name}`)
+        if (!uploadResponse.ok) {
+          console.error(`Failed to upload ${fileInfo.file.name}`)
+          continue
+        }
+
+        // 2. クライアントサイドでPDFからデータを抽出
+        setProcessingStatus(`データを抽出中... (${i + 1}/${uploadedFiles.length}): ${fileInfo.file.name}`)
+        const { extractFinancialDataFromPdf } = await import('@/lib/utils/pdf-processor')
+
+        try {
+          const extractedData = await extractFinancialDataFromPdf(
+            fileInfo.file,
+            fileInfo.fileType,
+            fileInfo.fiscalYear
+          )
+
+          if (extractedData.success) {
+            // 3. 抽出したデータをサーバーに送信して保存
+            setProcessingStatus(`データを保存中... (${i + 1}/${uploadedFiles.length}): ${fileInfo.file.name}`)
+            const saveResponse = await fetch(`/api/analysis/${analysisId}/save-extracted-data`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                fiscalYear: fileInfo.fiscalYear,
+                extractedData,
+              }),
+            })
+
+            if (!saveResponse.ok) {
+              console.error(`Failed to save extracted data for ${fileInfo.file.name}`)
+            }
+          } else {
+            console.error(`Failed to extract data from ${fileInfo.file.name}:`, extractedData.errors)
+            alert(`${fileInfo.file.name}からデータを抽出できませんでした。手動で入力してください。`)
+          }
+        } catch (extractError) {
+          console.error(`Error extracting data from ${fileInfo.file.name}:`, extractError)
+          alert(`${fileInfo.file.name}の処理中にエラーが発生しました。手動で入力してください。`)
         }
       }
 
-      // 分析を実行
+      // 分析を実行（財務指標を計算）
+      setProcessingStatus('財務指標を計算中...')
       const executeResponse = await fetch('/api/analysis/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -110,10 +155,12 @@ export default function NewAnalysisPage() {
       }
 
       // 分析詳細ページに遷移
+      setProcessingStatus('完了！')
       router.push(`/analysis/${analysisId}`)
     } catch (error) {
       console.error('Error creating analysis:', error)
       alert(error instanceof Error ? error.message : '分析の作成に失敗しました')
+      setIsProcessing(false)
     }
   }
 
@@ -360,9 +407,29 @@ export default function NewAnalysisPage() {
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         ) : (
-          <Button onClick={handleSubmit}>分析開始</Button>
+          <Button onClick={handleSubmit} disabled={isProcessing}>
+            {isProcessing ? '処理中...' : '分析開始'}
+          </Button>
         )}
       </div>
+
+      {/* 処理中モーダル */}
+      {isProcessing && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="p-8 max-w-md w-full">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+              <h3 className="text-lg font-semibold">PDFを処理中...</h3>
+              <p className="text-sm text-gray-600 text-center">{processingStatus}</p>
+              <p className="text-xs text-gray-500 text-center">
+                この処理には数分かかる場合があります。
+                <br />
+                ブラウザを閉じないでください。
+              </p>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

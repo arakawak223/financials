@@ -5,7 +5,7 @@ import type { PdfExtractResult, FileType, AccountDetail, AccountType } from '../
 
 // PDF.jsワーカーの設定
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 }
 
 /**
@@ -39,7 +39,8 @@ export async function extractTextWithOcr(file: File): Promise<{
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
 
-  const worker = await createWorker('jpn') // 日本語OCR
+  // 日本語+英語OCR
+  const worker = await createWorker(['jpn', 'eng'])
 
   const textPages: string[] = []
   let totalConfidence = 0
@@ -51,7 +52,11 @@ export async function extractTextWithOcr(file: File): Promise<{
 
       // Canvasにレンダリング
       const canvas = document.createElement('canvas')
-      const context = canvas.getContext('2d')!
+      const context = canvas.getContext('2d')
+      if (!context) {
+        throw new Error('Failed to get canvas context')
+      }
+
       canvas.height = viewport.height
       canvas.width = viewport.width
 
