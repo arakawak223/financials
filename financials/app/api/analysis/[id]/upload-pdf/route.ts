@@ -34,7 +34,7 @@ export async function POST(
     // Supabase Storageにアップロード
     const { data: uploadData, error: storageError } = await supabase
       .storage
-      .from('financial-documents')
+      .from('financial-pdfs')
       .upload(filename, buffer, {
         contentType: file.type,
         upsert: false,
@@ -43,14 +43,14 @@ export async function POST(
     if (storageError) {
       console.error('Storage upload error:', storageError)
       console.error('Storage error details:', JSON.stringify(storageError, null, 2))
-      console.error('Bucket name:', 'financial-documents')
+      console.error('Bucket name:', 'financial-pdfs')
       console.error('Filename:', filename)
       return NextResponse.json(
         {
           error: 'ファイルのアップロードに失敗しました',
           details: storageError.message,
           errorCode: storageError.name,
-          bucket: 'financial-documents'
+          bucket: 'financial-pdfs'
         },
         { status: 500 }
       )
@@ -59,7 +59,7 @@ export async function POST(
     // 公開URLを取得
     const { data: urlData } = supabase
       .storage
-      .from('financial-documents')
+      .from('financial-pdfs')
       .getPublicUrl(filename)
 
     // データベースにファイル情報を保存
@@ -82,7 +82,7 @@ export async function POST(
     if (uploadError) {
       console.error('Database error:', uploadError)
       // アップロードしたファイルを削除
-      await supabase.storage.from('financial-documents').remove([filename])
+      await supabase.storage.from('financial-pdfs').remove([filename])
       return NextResponse.json(
         { error: 'ファイル情報の保存に失敗しました' },
         { status: 500 }

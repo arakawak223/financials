@@ -19,8 +19,8 @@ export async function GET() {
     console.log('Buckets:', buckets)
     console.log('Buckets error:', bucketsError)
 
-    // 3. financial-documentsバケットの確認
-    const targetBucket = buckets?.find(b => b.name === 'financial-documents')
+    // 3. financial-pdfsバケットの確認
+    const targetBucket = buckets?.find(b => b.name === 'financial-pdfs')
     console.log('Target bucket found:', !!targetBucket)
 
     // 4. バケット内のファイル一覧取得（テスト）
@@ -29,7 +29,7 @@ export async function GET() {
     if (targetBucket) {
       const { data: files, error } = await supabase
         .storage
-        .from('financial-documents')
+        .from('financial-pdfs')
         .list()
       filesError = error
       filesList = files
