@@ -42,8 +42,16 @@ export async function POST(
 
     if (storageError) {
       console.error('Storage upload error:', storageError)
+      console.error('Storage error details:', JSON.stringify(storageError, null, 2))
+      console.error('Bucket name:', 'financial-documents')
+      console.error('Filename:', filename)
       return NextResponse.json(
-        { error: 'ファイルのアップロードに失敗しました: ' + storageError.message },
+        {
+          error: 'ファイルのアップロードに失敗しました',
+          details: storageError.message,
+          errorCode: storageError.name,
+          bucket: 'financial-documents'
+        },
         { status: 500 }
       )
     }
