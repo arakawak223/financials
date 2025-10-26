@@ -2,6 +2,10 @@
   "functions": {
     "app/api/pdf/process/route.ts": {
       "maxDuration": 60
+    },
+    "app/api/analysis/[id]/upload-pdf/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
     }
   },
   "rewrites": [
