@@ -88,38 +88,51 @@ export default function NewAnalysisPage() {
       // PDFファイルをアップロードして処理
       for (let i = 0; i < uploadedFiles.length; i++) {
         const fileInfo = uploadedFiles[i]
+        console.log(`🔄 [${i + 1}/${uploadedFiles.length}] 処理開始: ${fileInfo.file.name}`)
         setProcessingStatus(`PDFを処理中... (${i + 1}/${uploadedFiles.length}): ${fileInfo.file.name}`)
 
-        // 1. PDFをStorageにアップロード
-        const formData = new FormData()
-        formData.append('file', fileInfo.file)
-        formData.append('fileType', fileInfo.fileType)
-        formData.append('fiscalYear', fileInfo.fiscalYear.toString())
-
-        const uploadResponse = await fetch(`/api/analysis/${analysisId}/upload-pdf`, {
-          method: 'POST',
-          body: formData,
-        })
-
-        if (!uploadResponse.ok) {
-          console.error(`Failed to upload ${fileInfo.file.name}`)
-          continue
-        }
-
-        // 2. クライアントサイドでPDFからデータを抽出
-        setProcessingStatus(`データを抽出中... (${i + 1}/${uploadedFiles.length}): ${fileInfo.file.name}`)
-        const { extractFinancialDataFromPdf } = await import('@/lib/utils/pdf-processor')
-
         try {
+          // 1. PDFをStorageにアップロード
+          console.log(`📤 [${i + 1}/${uploadedFiles.length}] アップロード開始: ${fileInfo.file.name}`)
+          const formData = new FormData()
+          formData.append('file', fileInfo.file)
+          formData.append('fileType', fileInfo.fileType)
+          formData.append('fiscalYear', fileInfo.fiscalYear.toString())
+
+          const uploadResponse = await fetch(`/api/analysis/${analysisId}/upload-pdf`, {
+            method: 'POST',
+            body: formData,
+          })
+
+          if (!uploadResponse.ok) {
+            console.error(`❌ アップロード失敗: ${fileInfo.file.name}`, await uploadResponse.text())
+            continue
+          }
+          console.log(`✅ アップロード成功: ${fileInfo.file.name}`)
+
+          // 2. クライアントサイドでPDFからデータを抽出
+          setProcessingStatus(`データを抽出中... (${i + 1}/${uploadedFiles.length}): ${fileInfo.file.name}`)
+          console.log(`📖 [${i + 1}/${uploadedFiles.length}] PDF抽出開始: ${fileInfo.file.name}`)
+
+          const { extractFinancialDataFromPdf } = await import('@/lib/utils/pdf-processor')
+          console.log(`✅ pdf-processorモジュール読み込み成功`)
+
           const extractedData = await extractFinancialDataFromPdf(
             fileInfo.file,
             fileInfo.fileType,
             fileInfo.fiscalYear
           )
+          console.log(`✅ extractFinancialDataFromPdf 実行完了:`, extractedData)
 
           if (extractedData.success) {
+            console.log(`✅ データ抽出成功: ${fileInfo.file.name}`)
+            console.log(`📊 BS項目数: ${Object.keys(extractedData.balanceSheet || {}).length}`)
+            console.log(`📊 PL項目数: ${Object.keys(extractedData.profitLoss || {}).length}`)
+
             // 3. 抽出したデータをサーバーに送信して保存
             setProcessingStatus(`データを保存中... (${i + 1}/${uploadedFiles.length}): ${fileInfo.file.name}`)
+            console.log(`💾 [${i + 1}/${uploadedFiles.length}] データ保存開始: ${fileInfo.file.name}`)
+
             const saveResponse = await fetch(`/api/analysis/${analysisId}/save-extracted-data`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -130,15 +143,23 @@ export default function NewAnalysisPage() {
             })
 
             if (!saveResponse.ok) {
-              console.error(`Failed to save extracted data for ${fileInfo.file.name}`)
+              console.error(`❌ データ保存失敗: ${fileInfo.file.name}`, await saveResponse.text())
+            } else {
+              console.log(`✅ データ保存成功: ${fileInfo.file.name}`)
             }
           } else {
-            console.error(`Failed to extract data from ${fileInfo.file.name}:`, extractedData.errors)
+            console.error(`❌ データ抽出失敗: ${fileInfo.file.name}`)
+            console.error(`エラー内容:`, extractedData.errors)
+            console.error(`警告内容:`, extractedData.warnings)
             alert(`${fileInfo.file.name}からデータを抽出できませんでした。手動で入力してください。`)
           }
         } catch (extractError) {
-          console.error(`Error extracting data from ${fileInfo.file.name}:`, extractError)
-          alert(`${fileInfo.file.name}の処理中にエラーが発生しました。手動で入力してください。`)
+          console.error(`❌❌❌ 致命的エラー発生: ${fileInfo.file.name}`)
+          console.error(`エラータイプ:`, extractError instanceof Error ? extractError.name : typeof extractError)
+          console.error(`エラーメッセージ:`, extractError instanceof Error ? extractError.message : String(extractError))
+          console.error(`スタックトレース:`, extractError instanceof Error ? extractError.stack : 'N/A')
+          console.error(`エラーオブジェクト全体:`, extractError)
+          alert(`${fileInfo.file.name}の処理中にエラーが発生しました。手動で入力してください。\n\nエラー: ${extractError instanceof Error ? extractError.message : String(extractError)}`)
         }
       }
 

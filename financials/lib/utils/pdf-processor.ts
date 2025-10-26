@@ -104,34 +104,52 @@ export async function extractFinancialDataFromPdf(
   fileType: FileType,
   fiscalYear: number
 ): Promise<PdfExtractResult> {
+  console.log(`📄 extractFinancialDataFromPdf 開始:`, { fileName: file.name, fileType, fiscalYear, fileSize: file.size })
+
   try {
     // スキャンPDFかどうか判定
+    console.log(`🔍 スキャンPDF判定開始...`)
     const isScanned = await isPdfScanned(file)
+    console.log(`🔍 スキャンPDF判定結果: ${isScanned ? 'スキャンPDF（OCR必要）' : 'デジタルPDF（直接テキスト抽出）'}`)
 
     let textPages: string[]
     let confidence = 1.0
 
     if (isScanned) {
       // OCRで読み取り
+      console.log(`🔤 OCR処理開始...`)
       const ocrResult = await extractTextWithOcr(file)
       textPages = ocrResult.text
       confidence = ocrResult.confidence
+      console.log(`✅ OCR処理完了: confidence=${confidence}, pages=${textPages.length}`)
     } else {
       // デジタルPDFから直接テキスト抽出
+      console.log(`📖 テキスト抽出開始...`)
       textPages = await extractTextFromPdf(file)
+      console.log(`✅ テキスト抽出完了: pages=${textPages.length}, 総文字数=${textPages.join('').length}`)
     }
 
     // テキストから財務データを解析
+    console.log(`🔬 財務データ解析開始...`)
     const extractedData = parseFinancialData(textPages, fileType)
+    console.log(`✅ 財務データ解析完了`)
 
-    return {
+    const result = {
       success: true,
       fiscalYear,
       ...extractedData,
       confidence,
     }
+
+    console.log(`✅ extractFinancialDataFromPdf 完了:`, result)
+    return result
   } catch (error) {
-    console.error('PDF extraction error:', error)
+    console.error(`❌ PDF extraction error:`, error)
+    console.error(`エラー詳細:`, {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : 'N/A'
+    })
     return {
       success: false,
       errors: [error instanceof Error ? error.message : 'Unknown error'],
