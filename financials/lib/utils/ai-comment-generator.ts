@@ -128,10 +128,11 @@ async function generateOverallComment(analysis: FinancialAnalysis): Promise<stri
 2. 強みと課題を明確に指摘してください
 3. 専門的な視点から、具体的な数値を引用して説明してください
 4. 丁寧語を使用してください
+5. 業種の特性を考慮した評価をしてください（サービス業の場合は在庫・仕入について言及しない）
 `
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4',
+    model: 'gpt-4o-mini',
     messages: [
       {
         role: 'system',
@@ -166,7 +167,7 @@ async function generateLiquidityComment(analysis: FinancialAnalysis): Promise<st
 `
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4',
+    model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.7,
     max_tokens: 300,
@@ -198,7 +199,7 @@ async function generateProfitabilityComment(analysis: FinancialAnalysis): Promis
 `
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4',
+    model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.7,
     max_tokens: 300,
@@ -216,19 +217,40 @@ async function generateEfficiencyComment(analysis: FinancialAnalysis): Promise<s
 
   const latestPeriod = analysis.periods[analysis.periods.length - 1]
   const metrics = latestPeriod.metrics || {}
+  const balanceSheet = latestPeriod.balanceSheet as Record<string, number | undefined>
+
+  // 棚卸資産の有無をチェック
+  const hasInventory = (balanceSheet.inventory || 0) > 0
 
   const prompt = `
-以下の効率性指標について、分析コメントを2-3行で作成してください：
+以下の企業の効率性指標について、分析コメントを2-3行で作成してください：
 
+【企業情報】
+企業名: ${analysis.companyName}
+業種: ${analysis.industryName || '不明'}
+
+【効率性指標】
 - 売掛金滞留月数: ${formatMetric(metrics.receivablesTurnoverMonths, 'ヶ月')}
-- 棚卸資産滞留月数: ${formatMetric(metrics.inventoryTurnoverMonths, 'ヶ月')}
+${hasInventory ? `- 棚卸資産滞留月数: ${formatMetric(metrics.inventoryTurnoverMonths, 'ヶ月')}` : '- 棚卸資産: なし（サービス業）'}
 
-運転資金の効率性を評価し、キャッシュフロー改善の提案があればしてください。
+【指示】
+1. 運転資金の効率性を評価してください
+2. 売掛金の回収状況について評価してください
+3. ${hasInventory ? '棚卸資産の回転率について評価してください' : 'サービス業として適切な資金管理について評価してください'}
+4. キャッシュフロー改善の具体的な提案があればしてください
+5. 業種の特性を考慮したコメントにしてください
+6. 在庫がない場合は、仕入や在庫について言及しないでください
 `
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4',
-    messages: [{ role: 'user', content: prompt }],
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'system',
+        content: '企業の業種や事業内容に応じた適切な財務分析を行います。製造業や小売業でない場合は、在庫や仕入について言及しません。',
+      },
+      { role: 'user', content: prompt }
+    ],
     temperature: 0.7,
     max_tokens: 300,
   })
@@ -257,7 +279,7 @@ async function generateSafetyComment(analysis: FinancialAnalysis): Promise<strin
 `
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4',
+    model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.7,
     max_tokens: 300,
@@ -293,7 +315,7 @@ ${salesTrend.map((t) => `${t.year}年度: ${formatMetric(t.sales, '円')}`).join
 `
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4',
+    model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.7,
     max_tokens: 300,

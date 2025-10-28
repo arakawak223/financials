@@ -402,6 +402,12 @@ export function calculateAllMetrics(
     salesGrowthRate: previousPeriod
       ? calculateSalesGrowthRate(currentPeriod, previousPeriod) ?? undefined
       : undefined,
+    operatingIncomeGrowthRate: previousPeriod
+      ? calculateOperatingIncomeGrowthRate(currentPeriod, previousPeriod) ?? undefined
+      : undefined,
+    ebitdaGrowthRate: previousPeriod
+      ? calculateEbitdaGrowthRate(currentPeriod, previousPeriod) ?? undefined
+      : undefined,
     grossProfitMargin: calculateGrossProfitMargin(currentPeriod) ?? undefined,
     operatingProfitMargin: calculateOperatingProfitMargin(currentPeriod) ?? undefined,
     ebitdaMargin: calculateEbitdaMargin(currentPeriod) ?? undefined,

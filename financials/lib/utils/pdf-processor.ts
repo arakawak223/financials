@@ -1,7 +1,7 @@
 // PDF処理ユーティリティ
 import * as pdfjsLib from 'pdfjs-dist'
-import { createWorker } from 'tesseract.js'
 import type { PdfExtractResult, FileType, AccountDetail, AccountType } from '../types/financial'
+import { extractFinancialDataHybrid } from './ai-financial-extractor'
 
 // PDF.jsワーカーの設定
 if (typeof window !== 'undefined') {
@@ -39,8 +39,10 @@ export async function extractTextWithOcr(file: File): Promise<{
   const arrayBuffer = await file.arrayBuffer()
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
 
-  // 日本語+英語OCR
-  const worker = await createWorker(['jpn', 'eng'])
+  // 英語OCR（一時的に日本語を無効化）
+  console.log('🔧 Tesseract.js worker 作成中...')
+  const worker = await createWorker('eng')
+  console.log('✅ Tesseract.js worker 作成完了')
 
   const textPages: string[] = []
   let totalConfidence = 0
@@ -107,31 +109,48 @@ export async function extractFinancialDataFromPdf(
   console.log(`📄 extractFinancialDataFromPdf 開始:`, { fileName: file.name, fileType, fiscalYear, fileSize: file.size })
 
   try {
-    // スキャンPDFかどうか判定
-    console.log(`🔍 スキャンPDF判定開始...`)
-    const isScanned = await isPdfScanned(file)
-    console.log(`🔍 スキャンPDF判定結果: ${isScanned ? 'スキャンPDF（OCR必要）' : 'デジタルPDF（直接テキスト抽出）'}`)
+    // まずデジタルPDFとして直接テキスト抽出を試みる
+    console.log(`📖 デジタルPDFとしてテキスト抽出を試行...`)
+    const textPages = await extractTextFromPdf(file)
+    const directTextLength = textPages.join('').length
+    console.log(`📝 直接抽出された文字数: ${directTextLength}`)
 
-    let textPages: string[]
-    let confidence = 1.0
+    let finalTextPages: string[]
+    let confidence: number
 
-    if (isScanned) {
-      // OCRで読み取り
-      console.log(`🔤 OCR処理開始...`)
-      const ocrResult = await extractTextWithOcr(file)
-      textPages = ocrResult.text
+    // テキストがほとんど抽出できない場合はGoogle Vision APIでOCR
+    if (directTextLength < 100) {
+      console.log(`⚠️  デジタルPDFとしてのテキスト抽出失敗（文字数: ${directTextLength}）`)
+      console.log(`🔧 Google Cloud Vision API による OCR 処理に切り替えます...`)
+
+      // APIルート経由でVision API OCRを実行
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const ocrResponse = await fetch('/api/ocr/vision', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!ocrResponse.ok) {
+        const errorData = await ocrResponse.json()
+        throw new Error(errorData.error || 'Vision API OCR に失敗しました')
+      }
+
+      const ocrResult = await ocrResponse.json()
+      finalTextPages = ocrResult.text
       confidence = ocrResult.confidence
-      console.log(`✅ OCR処理完了: confidence=${confidence}, pages=${textPages.length}`)
+
+      console.log(`✅ Vision API OCR完了: pages=${finalTextPages.length}, 総文字数=${finalTextPages.join('').length}, confidence=${confidence}`)
     } else {
-      // デジタルPDFから直接テキスト抽出
-      console.log(`📖 テキスト抽出開始...`)
-      textPages = await extractTextFromPdf(file)
-      console.log(`✅ テキスト抽出完了: pages=${textPages.length}, 総文字数=${textPages.join('').length}`)
+      console.log(`✅ デジタルPDFとして正常にテキスト抽出完了`)
+      finalTextPages = textPages
+      confidence = 1.0
     }
 
     // テキストから財務データを解析
     console.log(`🔬 財務データ解析開始...`)
-    const extractedData = parseFinancialData(textPages, fileType)
+    const extractedData = await parseFinancialData(finalTextPages, fileType)
     console.log(`✅ 財務データ解析完了`)
 
     const result = {
@@ -160,16 +179,33 @@ export async function extractFinancialDataFromPdf(
 
 /**
  * 抽出したテキストから財務データを解析
+ * AI（Claude）を優先使用し、失敗時は従来の正規表現にフォールバック
  */
-function parseFinancialData(
+async function parseFinancialData(
   textPages: string[],
   fileType: FileType
-): Partial<PdfExtractResult> {
+): Promise<Partial<PdfExtractResult>> {
   const fullText = textPages.join('\n')
 
   if (fileType === 'financial_statement') {
     // 決算書（BS・PL）のパース
-    return parseFinancialStatement(fullText)
+    // AI抽出を試み、失敗時は正規表現にフォールバック
+    try {
+      console.log('🤖 AI（Claude）による財務データ抽出を試行...')
+      const aiResult = await extractFinancialDataHybrid(
+        fullText,
+        parseFinancialStatementWithRegex // フォールバック関数
+      )
+
+      return {
+        balanceSheet: aiResult.balanceSheet,
+        profitLoss: aiResult.profitLoss,
+        summary: aiResult.summary,
+      }
+    } catch (error) {
+      console.error('❌ AI抽出エラー、正規表現フォールバックを使用:', error)
+      return parseFinancialStatementWithRegex(fullText)
+    }
   } else {
     // 勘定科目内訳書のパース
     return parseAccountDetails(fullText)
@@ -177,15 +213,13 @@ function parseFinancialData(
 }
 
 /**
- * 決算書（BS・PL）のパース
+ * 決算書（BS・PL）のパース（正規表現版）
+ * AI抽出のフォールバックとして使用
  */
-function parseFinancialStatement(
+function parseFinancialStatementWithRegex(
   text: string
-): Partial<PdfExtractResult> {
-  const errors: string[] = []
-  const warnings: string[] = []
-
-  console.log('=== PDF抽出開始 ===')
+): { balanceSheet: Record<string, number>; profitLoss: Record<string, number> } {
+  console.log('=== PDF抽出開始（正規表現フォールバック） ===')
   console.log('抽出されたテキスト（最初の500文字）:', text.substring(0, 500))
 
   const balanceSheet: Record<string, number> = {}
@@ -231,10 +265,13 @@ function parseFinancialStatement(
     accounts_payable: [
       /買掛金[：:\s]+(\d[\d,]+)/i,
       /支払手形.*?買掛金[：:\s]+(\d[\d,]+)/i,
+      /未払金[：:\s]+(\d[\d,]+)/i, // 未払金も買掛金として扱う
     ],
     short_term_borrowings: [
       /短期借入金[：:\s]+(\d[\d,]+)/i,
       /短期.*?借入[：:\s]+(\d[\d,]+)/i,
+      /1年以内.*?返済.*?長期借入金[：:\s]+(\d[\d,]+)/i,
+      /一年以内.*?返済.*?長期借入金[：:\s]+(\d[\d,]+)/i,
     ],
     current_liabilities_total: [
       /流動負債.*?合計[：:\s]+(\d[\d,]+)/i,
@@ -304,7 +341,6 @@ function parseFinancialStatement(
     }
     if (!found) {
       console.log(`⚠️  ${key}が見つかりませんでした`)
-      warnings.push(`${key}が見つかりませんでした`)
     }
   }
 
@@ -325,7 +361,6 @@ function parseFinancialStatement(
     }
     if (!found) {
       console.log(`⚠️  ${key}が見つかりませんでした`)
-      warnings.push(`${key}が見つかりませんでした`)
     }
   }
 
@@ -335,8 +370,6 @@ function parseFinancialStatement(
   return {
     balanceSheet,
     profitLoss,
-    errors: errors.length > 0 ? errors : undefined,
-    warnings: warnings.length > 0 ? warnings : undefined,
   }
 }
 

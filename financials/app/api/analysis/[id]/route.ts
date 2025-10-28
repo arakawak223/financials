@@ -64,6 +64,15 @@ export async function GET(
       .eq('analysis_id', analysisId)
       .order('fiscal_year', { ascending: true })
 
+    console.log('📊 Periods data fetched:', periodsData?.length, 'periods')
+    if (periodsData && periodsData.length > 0) {
+      periodsData.forEach((p, i) => {
+        console.log(`Period ${i + 1} (${p.fiscal_year}):`)
+        console.log('  - balance_sheet_items:', Array.isArray(p.balance_sheet_items) ? p.balance_sheet_items.length : 'not array', p.balance_sheet_items)
+        console.log('  - profit_loss_items:', Array.isArray(p.profit_loss_items) ? p.profit_loss_items.length : 'not array', p.profit_loss_items)
+      })
+    }
+
     if (periodsError) {
       console.error('Periods fetch error:', periodsError)
       return NextResponse.json(
@@ -85,14 +94,20 @@ export async function GET(
         ? p.financial_metrics[0]
         : null
 
-      // balance_sheet_itemsとprofit_loss_itemsは配列で返されるため、最初の要素を取得
-      const balanceSheetData = Array.isArray(p.balance_sheet_items) && p.balance_sheet_items.length > 0
-        ? p.balance_sheet_items[0]
-        : {}
+      // Net Cash のログ出力（デバッグ用）
+      if (rawMetrics) {
+        console.log(`  財務指標読み込み (${p.fiscal_year}年度): net_cash =`, rawMetrics.net_cash)
+      }
 
-      const profitLossData = Array.isArray(p.profit_loss_items) && p.profit_loss_items.length > 0
-        ? p.profit_loss_items[0]
-        : {}
+      // balance_sheet_itemsとprofit_loss_itemsは、UNIQUE制約があるため
+      // 配列またはオブジェクトとして返される可能性がある
+      const balanceSheetData = Array.isArray(p.balance_sheet_items)
+        ? (p.balance_sheet_items.length > 0 ? p.balance_sheet_items[0] : {})
+        : (p.balance_sheet_items || {})
+
+      const profitLossData = Array.isArray(p.profit_loss_items)
+        ? (p.profit_loss_items.length > 0 ? p.profit_loss_items[0] : {})
+        : (p.profit_loss_items || {})
 
       return {
         fiscalYear: p.fiscal_year,
@@ -138,12 +153,27 @@ export async function GET(
       displayOrder: c.display_order,
     })) || []
 
-    const companyData = analysis.companies as { name: string; industry_id?: string } | null
+    const companyData = analysis.companies as {
+      name: string
+      industry_id?: string
+    } | null
+
+    // 業種情報を取得
+    let industryName: string | undefined
+    if (companyData?.industry_id) {
+      const { data: industryData } = await supabase
+        .from('industries')
+        .select('name')
+        .eq('id', companyData.industry_id)
+        .single()
+      industryName = industryData?.name
+    }
 
     const financialAnalysis: FinancialAnalysis = {
       id: analysis.id,
       companyId: analysis.company_id,
       companyName: companyData?.name || '不明',
+      industryName,
       analysisDate: new Date(analysis.analysis_date),
       fiscalYearStart: analysis.fiscal_year_start,
       fiscalYearEnd: analysis.fiscal_year_end,

@@ -267,6 +267,7 @@ export interface PdfExtractResult {
   errors?: string[]
   warnings?: string[]
   confidence?: number  // 信頼度 (0-1)
+  summary?: string     // AI生成の財務状況要約
 }
 
 // ========================================

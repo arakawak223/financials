@@ -31,48 +31,117 @@ export async function POST(request: NextRequest) {
 
     // 各期間のデータを保存
     for (const period of periods) {
-      // 期間レコードを作成または取得
-      const { data: periodRecord, error: periodError } = await supabase
+      // 既存の期間レコードを検索
+      const { data: existingPeriod } = await supabase
         .from('financial_periods')
-        .upsert({
-          analysis_id: analysisId,
-          fiscal_year: period.fiscalYear,
-          period_start_date: period.periodStartDate?.toISOString(),
-          period_end_date: period.periodEndDate?.toISOString(),
-        })
-        .select()
+        .select('id')
+        .eq('analysis_id', analysisId)
+        .eq('fiscal_year', period.fiscalYear)
         .single()
 
-      if (periodError) {
-        console.error('Period error:', periodError)
-        continue
+      let periodId: string
+
+      if (existingPeriod) {
+        // 既存レコードを更新
+        periodId = existingPeriod.id
+        const { error: updateError } = await supabase
+          .from('financial_periods')
+          .update({
+            period_start_date: period.periodStartDate?.toISOString(),
+            period_end_date: period.periodEndDate?.toISOString(),
+          })
+          .eq('id', periodId)
+
+        if (updateError) {
+          console.error('Period update error:', updateError)
+          continue
+        }
+      } else {
+        // 新規レコードを作成
+        const { data: newPeriod, error: insertError } = await supabase
+          .from('financial_periods')
+          .insert({
+            analysis_id: analysisId,
+            fiscal_year: period.fiscalYear,
+            period_start_date: period.periodStartDate?.toISOString(),
+            period_end_date: period.periodEndDate?.toISOString(),
+          })
+          .select()
+          .single()
+
+        if (insertError || !newPeriod) {
+          console.error('Period insert error:', insertError)
+          continue
+        }
+
+        periodId = newPeriod.id
       }
 
       // 貸借対照表データを保存
       if (period.balanceSheet) {
-        const { error: bsError } = await supabase
+        // 既存レコードを確認
+        const { data: existingBS } = await supabase
           .from('balance_sheet_items')
-          .upsert({
-            period_id: periodRecord.id,
-            ...period.balanceSheet,
-          })
+          .select('id')
+          .eq('period_id', periodId)
+          .single()
 
-        if (bsError) {
-          console.error('BS error:', bsError)
+        if (existingBS) {
+          // 更新
+          const { error: bsError } = await supabase
+            .from('balance_sheet_items')
+            .update(period.balanceSheet)
+            .eq('id', existingBS.id)
+
+          if (bsError) {
+            console.error('BS update error:', bsError)
+          }
+        } else {
+          // 新規作成
+          const { error: bsError } = await supabase
+            .from('balance_sheet_items')
+            .insert({
+              period_id: periodId,
+              ...period.balanceSheet,
+            })
+
+          if (bsError) {
+            console.error('BS insert error:', bsError)
+          }
         }
       }
 
       // 損益計算書データを保存
       if (period.profitLoss) {
-        const { error: plError } = await supabase
+        // 既存レコードを確認
+        const { data: existingPL } = await supabase
           .from('profit_loss_items')
-          .upsert({
-            period_id: periodRecord.id,
-            ...period.profitLoss,
-          })
+          .select('id')
+          .eq('period_id', periodId)
+          .single()
 
-        if (plError) {
-          console.error('PL error:', plError)
+        if (existingPL) {
+          // 更新
+          const { error: plError } = await supabase
+            .from('profit_loss_items')
+            .update(period.profitLoss)
+            .eq('id', existingPL.id)
+
+          if (plError) {
+            console.error('PL update error:', plError)
+          }
+        } else {
+          // 新規作成
+          const { error: plError } = await supabase
+            .from('profit_loss_items')
+            .insert({
+              period_id: periodId,
+              ...period.profitLoss,
+            })
+
+          if (plError) {
+            console.error('PL insert error:', plError)
+          }
         }
       }
 
@@ -81,21 +150,49 @@ export async function POST(request: NextRequest) {
         const { depreciation, capex } = period.manualInputs
 
         if (depreciation !== undefined) {
-          await supabase.from('manual_inputs').upsert({
-            period_id: periodRecord.id,
-            input_type: 'depreciation',
-            amount: depreciation,
-            created_by: userId,
-          })
+          const { data: existing } = await supabase
+            .from('manual_inputs')
+            .select('id')
+            .eq('period_id', periodId)
+            .eq('input_type', 'depreciation')
+            .single()
+
+          if (existing) {
+            await supabase
+              .from('manual_inputs')
+              .update({ amount: depreciation })
+              .eq('id', existing.id)
+          } else {
+            await supabase.from('manual_inputs').insert({
+              period_id: periodId,
+              input_type: 'depreciation',
+              amount: depreciation,
+              created_by: userId,
+            })
+          }
         }
 
         if (capex !== undefined) {
-          await supabase.from('manual_inputs').upsert({
-            period_id: periodRecord.id,
-            input_type: 'capex',
-            amount: capex,
-            created_by: userId,
-          })
+          const { data: existing } = await supabase
+            .from('manual_inputs')
+            .select('id')
+            .eq('period_id', periodId)
+            .eq('input_type', 'capex')
+            .single()
+
+          if (existing) {
+            await supabase
+              .from('manual_inputs')
+              .update({ amount: capex })
+              .eq('id', existing.id)
+          } else {
+            await supabase.from('manual_inputs').insert({
+              period_id: periodId,
+              input_type: 'capex',
+              amount: capex,
+              created_by: userId,
+            })
+          }
         }
       }
 
@@ -120,16 +217,35 @@ export async function POST(request: NextRequest) {
 
       // 財務指標を保存
       if (period.metrics) {
-        const { error: metricsError } = await supabase
+        const { data: existingMetrics } = await supabase
           .from('financial_metrics')
-          .upsert({
-            analysis_id: analysisId,
-            period_id: periodRecord.id,
-            ...period.metrics,
-          })
+          .select('id')
+          .eq('period_id', periodId)
+          .single()
 
-        if (metricsError) {
-          console.error('Metrics error:', metricsError)
+        if (existingMetrics) {
+          const { error: metricsError } = await supabase
+            .from('financial_metrics')
+            .update({
+              ...period.metrics,
+            })
+            .eq('id', existingMetrics.id)
+
+          if (metricsError) {
+            console.error('Metrics update error:', metricsError)
+          }
+        } else {
+          const { error: metricsError } = await supabase
+            .from('financial_metrics')
+            .insert({
+              analysis_id: analysisId,
+              period_id: periodId,
+              ...period.metrics,
+            })
+
+          if (metricsError) {
+            console.error('Metrics insert error:', metricsError)
+          }
         }
       }
     }

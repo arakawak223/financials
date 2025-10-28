@@ -86,10 +86,10 @@ export function generateChartsFromMetrics(periods: Array<{
     charts.push({
       title: 'NetCash / NetDebt推移',
       type: 'bar',
-      unit: '円',
+      unit: '百万円',
       data: periods.map((p) => ({
         fiscalYear: p.fiscalYear,
-        value: p.metrics?.netCash || 0,
+        value: Math.round((p.metrics?.netCash || 0) / 1000000),  // 百万円に変換
       })),
     })
   }
@@ -99,10 +99,10 @@ export function generateChartsFromMetrics(periods: Array<{
     charts.push({
       title: '売上高推移',
       type: 'line',
-      unit: '円',
+      unit: '百万円',
       data: periods.map((p) => ({
         fiscalYear: p.fiscalYear,
-        value: p.profitLoss?.netSales || 0,
+        value: Math.round((p.profitLoss?.netSales || 0) / 1000000),  // 百万円に変換
       })),
     })
   }
@@ -112,10 +112,10 @@ export function generateChartsFromMetrics(periods: Array<{
     charts.push({
       title: '営業利益推移',
       type: 'line',
-      unit: '円',
+      unit: '百万円',
       data: periods.map((p) => ({
         fiscalYear: p.fiscalYear,
-        value: p.profitLoss?.operatingIncome || 0,
+        value: Math.round((p.profitLoss?.operatingIncome || 0) / 1000000),  // 百万円に変換
       })),
     })
   }
@@ -125,10 +125,10 @@ export function generateChartsFromMetrics(periods: Array<{
     charts.push({
       title: 'EBITDA推移',
       type: 'bar',
-      unit: '円',
+      unit: '百万円',
       data: periods.map((p) => ({
         fiscalYear: p.fiscalYear,
-        value: p.metrics?.ebitda || 0,
+        value: Math.round((p.metrics?.ebitda || 0) / 1000000),  // 百万円に変換
       })),
     })
   }
@@ -138,10 +138,10 @@ export function generateChartsFromMetrics(periods: Array<{
     charts.push({
       title: 'FCF推移',
       type: 'bar',
-      unit: '円',
+      unit: '百万円',
       data: periods.map((p) => ({
         fiscalYear: p.fiscalYear,
-        value: p.metrics?.fcf || 0,
+        value: Math.round((p.metrics?.fcf || 0) / 1000000),  // 百万円に変換
       })),
     })
   }

@@ -195,13 +195,26 @@ export default function AnalysisDetailPage() {
       {analysis.comments && analysis.comments.length > 0 && (
         <div className="mb-6 space-y-4">
           <h2 className="text-2xl font-semibold">AI分析コメント</h2>
-          {analysis.comments.map((comment) => (
-            <Card key={comment.id} className="p-6">
-              <div className="whitespace-pre-wrap">
-                {comment.editedText || comment.aiGeneratedText}
-              </div>
-            </Card>
-          ))}
+          {analysis.comments.map((comment) => {
+            const commentTitles: Record<string, string> = {
+              overall: '📊 総合評価',
+              liquidity: '💧 流動性分析',
+              profitability: '💰 収益性分析',
+              efficiency: '⚡効率性分析',
+              safety: '🛡️ 安全性分析',
+              growth: '📈 成長性分析',
+            }
+            const title = commentTitles[comment.commentType] || 'コメント'
+
+            return (
+              <Card key={comment.id} className="p-6">
+                <h3 className="text-lg font-semibold mb-3 text-blue-700">{title}</h3>
+                <div className="whitespace-pre-wrap text-gray-700">
+                  {comment.editedText || comment.aiGeneratedText}
+                </div>
+              </Card>
+            )
+          })}
         </div>
       )}
 
@@ -278,6 +291,9 @@ export default function AnalysisDetailPage() {
           onUpdate={async (updatedPeriods) => {
             // データ更新API呼び出し
             try {
+              setLoading(true)
+
+              // 1. データを保存
               const response = await fetch(`/api/analysis/save`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -291,11 +307,28 @@ export default function AnalysisDetailPage() {
                 throw new Error('保存に失敗しました')
               }
 
+              // 2. 財務指標を再計算してAIコメントも再生成
+              const executeResponse = await fetch(`/api/analysis/execute`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  analysisId,
+                  skipComments: false // AIコメントも再生成
+                }),
+              })
+
+              if (!executeResponse.ok) {
+                console.warn('財務指標の再計算に失敗しました')
+              }
+
+              // 3. 分析データを再読み込み
               await loadAnalysis()
-              alert('保存しました')
+              alert('保存しました。財務指標、グラフ、AIコメントを更新しました。')
             } catch (err) {
               console.error('Save error:', err)
               alert(err instanceof Error ? err.message : '保存に失敗しました')
+            } finally {
+              setLoading(false)
             }
           }}
         />

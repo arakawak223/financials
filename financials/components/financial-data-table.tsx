@@ -44,6 +44,31 @@ export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTab
 
   const formatValue = (value: number | undefined) => formatAmountWithUnit(value, unit, 1)
 
+  // 「その他」科目の計算関数
+  const calculateOtherCurrentAssets = (period: PeriodFinancialData): number => {
+    const bs = period.balanceSheet as Record<string, number | undefined>
+    const total = bs.current_assets_total || 0
+    const cash = bs.cash_and_deposits || 0
+    const receivables = bs.accounts_receivable || 0
+    const inventory = bs.inventory || 0
+    return Math.max(0, total - cash - receivables - inventory)
+  }
+
+  const calculateOtherCurrentLiabilities = (period: PeriodFinancialData): number => {
+    const bs = period.balanceSheet as Record<string, number | undefined>
+    const total = bs.current_liabilities_total || 0
+    const payables = bs.accounts_payable || 0
+    const borrowings = bs.short_term_borrowings || 0
+    return Math.max(0, total - payables - borrowings)
+  }
+
+  const calculateOtherFixedLiabilities = (period: PeriodFinancialData): number => {
+    const bs = period.balanceSheet as Record<string, number | undefined>
+    const total = bs.fixed_liabilities_total || 0
+    const borrowings = bs.long_term_borrowings || 0
+    return Math.max(0, total - borrowings)
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-sm text-gray-600 mb-2">
@@ -94,36 +119,47 @@ export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTab
                 </td>
               </tr>
               {[
-                { key: 'cash_and_deposits', label: '現金預金' },
-                { key: 'accounts_receivable', label: '売掛金' },
-                { key: 'inventory', label: '棚卸資産' },
-                { key: 'current_assets_total', label: '流動資産合計' },
-                { key: 'tangible_fixed_assets', label: '有形固定資産' },
-                { key: 'intangible_fixed_assets', label: '無形固定資産' },
-                { key: 'investments_and_other_assets', label: '投資その他の資産' },
-                { key: 'fixed_assets_total', label: '固定資産合計' },
-                { key: 'total_assets', label: '資産合計' },
+                { key: 'cash_and_deposits', label: '現金預金', editable: true },
+                { key: 'accounts_receivable', label: '売掛金', editable: true },
+                { key: 'inventory', label: '棚卸資産', editable: true },
+                { key: 'other_current_assets', label: 'その他流動資産', editable: false, calculated: true },
+                { key: 'current_assets_total', label: '流動資産合計', editable: true },
+                { key: 'tangible_fixed_assets', label: '有形固定資産', editable: true },
+                { key: 'intangible_fixed_assets', label: '無形固定資産', editable: true },
+                { key: 'investments_and_other_assets', label: '投資その他の資産', editable: true },
+                { key: 'fixed_assets_total', label: '固定資産合計', editable: true },
+                { key: 'total_assets', label: '資産合計', editable: true },
               ].map((item) => (
                 <tr key={item.key} className="border-b hover:bg-gray-50">
                   <td className="p-2">{item.label}</td>
-                  {editedPeriods.map((period, index) => (
-                    <td key={period.fiscalYear} className="p-2 text-right">
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          className="w-full text-right border rounded px-2 py-1"
-                          value={
-                            (period.balanceSheet as Record<string, number | undefined>)[item.key]?.toLocaleString() || ''
-                          }
-                          onChange={(e) =>
-                            updateValue(index, 'balanceSheet', item.key, e.target.value)
-                          }
-                        />
-                      ) : (
-                        formatValue((period.balanceSheet as Record<string, number | undefined>)[item.key])
-                      )}
-                    </td>
-                  ))}
+                  {editedPeriods.map((period, index) => {
+                    // 計算項目の値を取得
+                    let displayValue: number | undefined
+                    if (item.key === 'other_current_assets') {
+                      displayValue = calculateOtherCurrentAssets(period)
+                    } else {
+                      displayValue = (period.balanceSheet as Record<string, number | undefined>)[item.key]
+                    }
+
+                    return (
+                      <td key={period.fiscalYear} className="p-2 text-right">
+                        {isEditing && item.editable !== false ? (
+                          <input
+                            type="text"
+                            className="w-full text-right border rounded px-2 py-1"
+                            value={displayValue?.toLocaleString() || ''}
+                            onChange={(e) =>
+                              updateValue(index, 'balanceSheet', item.key, e.target.value)
+                            }
+                          />
+                        ) : (
+                          <span className={item.calculated ? 'text-gray-600 italic' : ''}>
+                            {formatValue(displayValue)}
+                          </span>
+                        )}
+                      </td>
+                    )
+                  })}
                 </tr>
               ))}
 
@@ -134,33 +170,47 @@ export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTab
                 </td>
               </tr>
               {[
-                { key: 'accounts_payable', label: '買掛金' },
-                { key: 'short_term_borrowings', label: '短期借入金' },
-                { key: 'current_liabilities_total', label: '流動負債合計' },
-                { key: 'long_term_borrowings', label: '長期借入金' },
-                { key: 'fixed_liabilities_total', label: '固定負債合計' },
-                { key: 'total_liabilities', label: '負債合計' },
+                { key: 'accounts_payable', label: '買掛金', editable: true },
+                { key: 'short_term_borrowings', label: '短期借入金', editable: true },
+                { key: 'other_current_liabilities', label: 'その他流動負債', editable: false, calculated: true },
+                { key: 'current_liabilities_total', label: '流動負債合計', editable: true },
+                { key: 'long_term_borrowings', label: '長期借入金', editable: true },
+                { key: 'other_fixed_liabilities', label: 'その他固定負債', editable: false, calculated: true },
+                { key: 'fixed_liabilities_total', label: '固定負債合計', editable: true },
+                { key: 'total_liabilities', label: '負債合計', editable: true },
               ].map((item) => (
                 <tr key={item.key} className="border-b hover:bg-gray-50">
                   <td className="p-2">{item.label}</td>
-                  {editedPeriods.map((period, index) => (
-                    <td key={period.fiscalYear} className="p-2 text-right">
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          className="w-full text-right border rounded px-2 py-1"
-                          value={
-                            (period.balanceSheet as Record<string, number | undefined>)[item.key]?.toLocaleString() || ''
-                          }
-                          onChange={(e) =>
-                            updateValue(index, 'balanceSheet', item.key, e.target.value)
-                          }
-                        />
-                      ) : (
-                        formatValue((period.balanceSheet as Record<string, number | undefined>)[item.key])
-                      )}
-                    </td>
-                  ))}
+                  {editedPeriods.map((period, index) => {
+                    // 計算項目の値を取得
+                    let displayValue: number | undefined
+                    if (item.key === 'other_current_liabilities') {
+                      displayValue = calculateOtherCurrentLiabilities(period)
+                    } else if (item.key === 'other_fixed_liabilities') {
+                      displayValue = calculateOtherFixedLiabilities(period)
+                    } else {
+                      displayValue = (period.balanceSheet as Record<string, number | undefined>)[item.key]
+                    }
+
+                    return (
+                      <td key={period.fiscalYear} className="p-2 text-right">
+                        {isEditing && item.editable !== false ? (
+                          <input
+                            type="text"
+                            className="w-full text-right border rounded px-2 py-1"
+                            value={displayValue?.toLocaleString() || ''}
+                            onChange={(e) =>
+                              updateValue(index, 'balanceSheet', item.key, e.target.value)
+                            }
+                          />
+                        ) : (
+                          <span className={item.calculated ? 'text-gray-600 italic' : ''}>
+                            {formatValue(displayValue)}
+                          </span>
+                        )}
+                      </td>
+                    )
+                  })}
                 </tr>
               ))}
 
