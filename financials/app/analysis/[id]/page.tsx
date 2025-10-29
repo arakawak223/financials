@@ -307,23 +307,32 @@ export default function AnalysisDetailPage() {
                 throw new Error('保存に失敗しました')
               }
 
-              // 2. 財務指標を再計算してAIコメントも再生成
-              const executeResponse = await fetch(`/api/analysis/execute`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  analysisId,
-                  skipComments: false // AIコメントも再生成
-                }),
-              })
+              // 2. 財務指標を再計算
+              try {
+                const executeResponse = await fetch(`/api/analysis/execute`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    analysisId,
+                    skipComments: true // 保存時はコメント生成をスキップ
+                  }),
+                })
 
-              if (!executeResponse.ok) {
-                console.warn('財務指標の再計算に失敗しました')
+                if (!executeResponse.ok) {
+                  const errorData = await executeResponse.json()
+                  console.error('財務指標の再計算エラー:', errorData)
+                  throw new Error('財務指標の再計算に失敗しました')
+                }
+
+                console.log('財務指標の再計算が完了しました')
+              } catch (executeError) {
+                console.error('Execute error:', executeError)
+                // 財務指標の再計算に失敗しても続行
               }
 
               // 3. 分析データを再読み込み
               await loadAnalysis()
-              alert('保存しました。財務指標、グラフ、AIコメントを更新しました。')
+              alert('保存しました。財務指標とグラフを更新しました。')
             } catch (err) {
               console.error('Save error:', err)
               alert(err instanceof Error ? err.message : '保存に失敗しました')

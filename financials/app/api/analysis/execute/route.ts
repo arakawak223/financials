@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 // Force recompile
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { calculateAllMetrics } from '@/lib/utils/financial-calculations'
+import { calculateAllMetrics, calculateDepreciationFromAccountDetails, calculateCapexAuto } from '@/lib/utils/financial-calculations'
 import { generateAnalysisComments } from '@/lib/utils/ai-comment-generator'
 import type { FinancialAnalysis, PeriodFinancialData } from '@/lib/types/financial'
 
@@ -29,18 +29,30 @@ export async function POST(request: NextRequest) {
     }
 
     // 分析データを取得
+    console.log('🔍 Execute API: Fetching analysis with ID:', analysisId)
     const { data: analysis, error: analysisError } = await supabase
       .from('financial_analyses')
-      .select('*, companies(name, industry_id)')
+      .select('*, companies(name)')
       .eq('id', analysisId)
       .single()
 
-    if (analysisError || !analysis) {
+    if (analysisError) {
+      console.error('❌ Execute API: Analysis fetch error:', analysisError)
+      return NextResponse.json(
+        { error: 'Analysis not found', details: analysisError.message },
+        { status: 404 }
+      )
+    }
+
+    if (!analysis) {
+      console.error('❌ Execute API: Analysis is null')
       return NextResponse.json(
         { error: 'Analysis not found' },
         { status: 404 }
       )
     }
+
+    console.log('✅ Execute API: Analysis found:', analysis.id)
 
     // 期間データを取得
     const { data: periodsData, error: periodsError } = await supabase
@@ -50,7 +62,8 @@ export async function POST(request: NextRequest) {
         *,
         balance_sheet_items(*),
         profit_loss_items(*),
-        manual_inputs(*)
+        manual_inputs(*),
+        account_details(*)
       `
       )
       .eq('analysis_id', analysisId)
@@ -65,12 +78,14 @@ export async function POST(request: NextRequest) {
 
     // データを変換
     type PeriodData = {
+      id: string
       fiscal_year: number
       period_start_date?: string
       period_end_date?: string
       balance_sheet_items?: Array<Record<string, unknown>>
       profit_loss_items?: Array<Record<string, unknown>>
       manual_inputs?: Array<{ input_type: string; amount?: number }>
+      account_details?: Array<{ account_category: string; account_name: string; amount?: number; notes?: string }>
     }
 
     const periods: PeriodFinancialData[] = periodsData.map((p: PeriodData) => {
@@ -84,6 +99,21 @@ export async function POST(request: NextRequest) {
         ? (p.profit_loss_items.length > 0 ? p.profit_loss_items[0] : {})
         : (p.profit_loss_items || {})
 
+      const fixedAssetDisposalValue = p.manual_inputs?.find((m) => m.input_type === 'fixed_asset_disposal_value')?.amount
+
+      // account_detailsを変換
+      const accountDetails = (p.account_details || []).map((detail) => ({
+        accountType: detail.account_type || 'other' as const,
+        itemName: detail.item_name,
+        amount: detail.amount,
+        note: detail.note,
+      }))
+
+      console.log(`📊 期間 ${p.fiscal_year} のデータ:`, {
+        account_details_count: accountDetails.length,
+        fixedAssetDisposalValue
+      })
+
       return {
         fiscalYear: p.fiscal_year,
         periodStartDate: p.period_start_date ? new Date(p.period_start_date) : undefined,
@@ -91,14 +121,29 @@ export async function POST(request: NextRequest) {
         balanceSheet: balanceSheetData as PeriodFinancialData['balanceSheet'],
         profitLoss: profitLossData as PeriodFinancialData['profitLoss'],
         manualInputs: {
-          depreciation: p.manual_inputs?.find((m) => m.input_type === 'depreciation')
-            ?.amount,
-          capex: p.manual_inputs?.find((m) => m.input_type === 'capex')?.amount,
+          depreciation: 0, // 後で自動計算
+          capex: 0,        // 後で自動計算
+          fixedAssetDisposalValue,
         },
-        accountDetails: [],
+        accountDetails,
         metrics: undefined,
       }
     })
+
+    // 減価償却費とCAPEXを自動計算
+    console.log('💡 減価償却費とCAPEXの自動計算開始')
+    for (let i = 0; i < periods.length; i++) {
+      // 減価償却費をaccount_detailsから自動集計
+      const autoDepreciation = calculateDepreciationFromAccountDetails(periods[i])
+      periods[i].manualInputs.depreciation = autoDepreciation
+
+      // CAPEXを自動計算（前期データが必要）
+      const previousPeriod = i > 0 ? periods[i - 1] : null
+      const autoCapex = calculateCapexAuto(periods[i], previousPeriod)
+      periods[i].manualInputs.capex = autoCapex ?? 0
+
+      console.log(`  期間 ${periods[i].fiscalYear}: 減価償却費=${autoDepreciation}, CAPEX=${autoCapex}`)
+    }
 
     // 各期間の財務指標を計算
     console.log('📊 財務指標計算開始:', periods.length, '期間')
@@ -173,6 +218,36 @@ export async function POST(request: NextRequest) {
       } else {
         console.log('  ✅ 指標保存成功')
       }
+
+      // 自動計算した減価償却費とCAPEXをmanual_inputsテーブルに保存
+      const depreciation = periods[i].manualInputs.depreciation ?? 0
+      const capex = periods[i].manualInputs.capex ?? 0
+
+      // 減価償却費を保存（既存レコードを削除してから挿入）
+      await supabase.from('manual_inputs')
+        .delete()
+        .eq('period_id', periodRecord.id)
+        .eq('input_type', 'depreciation')
+
+      await supabase.from('manual_inputs').insert({
+        period_id: periodRecord.id,
+        input_type: 'depreciation',
+        amount: depreciation,
+      })
+
+      // CAPEXを保存（既存レコードを削除してから挿入）
+      await supabase.from('manual_inputs')
+        .delete()
+        .eq('period_id', periodRecord.id)
+        .eq('input_type', 'capex')
+
+      await supabase.from('manual_inputs').insert({
+        period_id: periodRecord.id,
+        input_type: 'capex',
+        amount: capex,
+      })
+
+      console.log('  ✅ 減価償却費とCAPEX保存完了')
     }
     console.log('\n✅ 全期間の指標計算完了')
 

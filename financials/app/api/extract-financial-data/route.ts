@@ -88,9 +88,18 @@ ${ocrText}
    - income_taxes: 法人税等
    - net_income: 当期純利益
 
-3. 数値はカンマやスペースを除去して整数で返してください
-4. 見つからない項目は省略してください（nullや0を入れないでください）
-5. 財務諸表の要約を日本語で記載してください
+3. 勘定科目明細（account_details）を抽出：
+   - 「販売費及び一般管理費の明細」がある場合、各項目（減価償却費、給料手当、地代家賃など）を抽出
+   - 「製造原価報告書」の明細がある場合、各項目を抽出
+   - 各明細は以下の形式で返してください：
+     * account_category: 区分（"selling_general_admin" または "cost_of_sales"）
+     * account_name: 勘定科目名
+     * amount: 金額（数値）
+   - 特に「減価償却費」「償却費」を含む項目は必ず抽出してください
+
+4. 数値はカンマやスペースを除去して整数で返してください
+5. 見つからない項目は省略してください（nullや0を入れないでください）
+6. 財務諸表の要約を日本語で記載してください
 
 【出力形式】
 必ずこのJSON形式で回答してください（他の説明文は不要です）：
@@ -105,6 +114,14 @@ ${ocrText}
     "cost_of_sales": 数値,
     ...
   },
+  "accountDetails": [
+    {
+      "account_category": "selling_general_admin",
+      "account_name": "減価償却費",
+      "amount": 数値
+    },
+    ...
+  ],
   "summary": "財務状況の要約（150文字程度）"
 }`,
         },
@@ -134,11 +151,16 @@ ${ocrText}
     console.log('✅ 財務データ抽出成功')
     console.log('📊 BS項目数:', Object.keys(result.balanceSheet || {}).length)
     console.log('📊 PL項目数:', Object.keys(result.profitLoss || {}).length)
+    console.log('📊 勘定科目明細数:', (result.accountDetails || []).length)
+    if (result.accountDetails && result.accountDetails.length > 0) {
+      console.log('📝 明細項目:', result.accountDetails.map((d: any) => d.account_name).join(', '))
+    }
 
     return NextResponse.json({
       success: true,
       balanceSheet: result.balanceSheet || {},
       profitLoss: result.profitLoss || {},
+      accountDetails: result.accountDetails || [],
       confidence: 0.95,
       summary: result.summary,
     })

@@ -70,6 +70,7 @@ export async function GET(
         console.log(`Period ${i + 1} (${p.fiscal_year}):`)
         console.log('  - balance_sheet_items:', Array.isArray(p.balance_sheet_items) ? p.balance_sheet_items.length : 'not array', p.balance_sheet_items)
         console.log('  - profit_loss_items:', Array.isArray(p.profit_loss_items) ? p.profit_loss_items.length : 'not array', p.profit_loss_items)
+        console.log('  - manual_inputs:', Array.isArray(p.manual_inputs) ? p.manual_inputs.length : 'not array', p.manual_inputs)
       })
     }
 

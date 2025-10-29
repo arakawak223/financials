@@ -42,7 +42,7 @@ export type AccountType =
 // ========================================
 // 手入力タイプ
 // ========================================
-export type ManualInputType = 'depreciation' | 'capex'
+export type ManualInputType = 'depreciation' | 'capex' | 'fixed_asset_disposal_value'
 
 // ========================================
 // コメントタイプ
@@ -176,8 +176,9 @@ export interface PeriodFinancialData {
 
   // 手入力データ
   manualInputs: {
-    depreciation?: number  // 減価償却費
-    capex?: number        // 設備投資額
+    depreciation?: number              // 減価償却費（自動計算）
+    capex?: number                    // 設備投資額（自動計算）
+    fixedAssetDisposalValue?: number  // 固定資産売却簿価（手入力）
   }
 
   // 勘定科目内訳

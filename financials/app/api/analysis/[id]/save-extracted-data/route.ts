@@ -100,6 +100,40 @@ export async function POST(
       }
     }
 
+    // 勘定科目明細を保存
+    if (extractedData.accountDetails && extractedData.accountDetails.length > 0) {
+      console.log('💾 勘定科目明細を保存:', extractedData.accountDetails.length, '件')
+
+      // 既存の明細を削除
+      const { error: deleteError } = await supabase
+        .from('account_details')
+        .delete()
+        .eq('period_id', periodId)
+
+      if (deleteError) {
+        console.error('Account details delete error:', deleteError)
+      }
+
+      // 新しい明細を挿入
+      const accountDetailsData = extractedData.accountDetails.map((detail: any) => ({
+        period_id: periodId,
+        account_category: detail.account_category || detail.accountType || 'other',
+        item_name: detail.account_name || detail.itemName,
+        amount: detail.amount,
+        note: detail.note || detail.notes,
+      }))
+
+      const { error: insertError } = await supabase
+        .from('account_details')
+        .insert(accountDetailsData)
+
+      if (insertError) {
+        console.error('Account details insert error:', insertError)
+      } else {
+        console.log('✅ 勘定科目明細保存完了')
+      }
+    }
+
     return NextResponse.json({
       success: true,
       periodId,

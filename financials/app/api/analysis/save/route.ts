@@ -147,51 +147,113 @@ export async function POST(request: NextRequest) {
 
       // 手入力データを保存
       if (period.manualInputs) {
-        const { depreciation, capex } = period.manualInputs
+        const { depreciation, capex, fixedAssetDisposalValue } = period.manualInputs
 
         if (depreciation !== undefined) {
-          const { data: existing } = await supabase
+          const { data: existing, error: selectError } = await supabase
             .from('manual_inputs')
             .select('id')
             .eq('period_id', periodId)
             .eq('input_type', 'depreciation')
             .single()
 
+          if (selectError && selectError.code !== 'PGRST116') {
+            console.error('Depreciation select error:', selectError)
+          }
+
           if (existing) {
-            await supabase
+            const { error: updateError } = await supabase
               .from('manual_inputs')
               .update({ amount: depreciation })
               .eq('id', existing.id)
+
+            if (updateError) {
+              console.error('Depreciation update error:', updateError)
+              throw new Error('減価償却費の更新に失敗しました')
+            }
           } else {
-            await supabase.from('manual_inputs').insert({
+            const { error: insertError } = await supabase.from('manual_inputs').insert({
               period_id: periodId,
               input_type: 'depreciation',
               amount: depreciation,
-              created_by: userId,
             })
+
+            if (insertError) {
+              console.error('Depreciation insert error:', insertError)
+              throw new Error('減価償却費の挿入に失敗しました')
+            }
           }
         }
 
         if (capex !== undefined) {
-          const { data: existing } = await supabase
+          const { data: existing, error: selectError } = await supabase
             .from('manual_inputs')
             .select('id')
             .eq('period_id', periodId)
             .eq('input_type', 'capex')
             .single()
 
+          if (selectError && selectError.code !== 'PGRST116') {
+            console.error('Capex select error:', selectError)
+          }
+
           if (existing) {
-            await supabase
+            const { error: updateError } = await supabase
               .from('manual_inputs')
               .update({ amount: capex })
               .eq('id', existing.id)
+
+            if (updateError) {
+              console.error('Capex update error:', updateError)
+              throw new Error('設備投資額の更新に失敗しました')
+            }
           } else {
-            await supabase.from('manual_inputs').insert({
+            const { error: insertError } = await supabase.from('manual_inputs').insert({
               period_id: periodId,
               input_type: 'capex',
               amount: capex,
-              created_by: userId,
             })
+
+            if (insertError) {
+              console.error('Capex insert error:', insertError)
+              throw new Error('設備投資額の挿入に失敗しました')
+            }
+          }
+        }
+
+        if (fixedAssetDisposalValue !== undefined) {
+          const { data: existing, error: selectError } = await supabase
+            .from('manual_inputs')
+            .select('id')
+            .eq('period_id', periodId)
+            .eq('input_type', 'fixed_asset_disposal_value')
+            .single()
+
+          if (selectError && selectError.code !== 'PGRST116') {
+            console.error('Fixed asset disposal value select error:', selectError)
+          }
+
+          if (existing) {
+            const { error: updateError } = await supabase
+              .from('manual_inputs')
+              .update({ amount: fixedAssetDisposalValue })
+              .eq('id', existing.id)
+
+            if (updateError) {
+              console.error('Fixed asset disposal value update error:', updateError)
+              throw new Error('固定資産売却簿価の更新に失敗しました')
+            }
+          } else {
+            const { error: insertError } = await supabase.from('manual_inputs').insert({
+              period_id: periodId,
+              input_type: 'fixed_asset_disposal_value',
+              amount: fixedAssetDisposalValue,
+            })
+
+            if (insertError) {
+              console.error('Fixed asset disposal value insert error:', insertError)
+              throw new Error('固定資産売却簿価の挿入に失敗しました')
+            }
           }
         }
       }
@@ -199,7 +261,7 @@ export async function POST(request: NextRequest) {
       // 勘定科目内訳を保存
       if (period.accountDetails && period.accountDetails.length > 0) {
         const accountDetailsData = period.accountDetails.map((detail) => ({
-          period_id: periodRecord.id,
+          period_id: periodId,
           account_type: detail.accountType,
           item_name: detail.itemName,
           amount: detail.amount,

@@ -82,10 +82,15 @@ export function calculateInventoryTurnoverMonths(data: PeriodFinancialData): num
 export function calculateEbitda(data: PeriodFinancialData): number | null {
   const { profitLoss, manualInputs } = data
   const operatingIncome = (profitLoss as DbProfitLoss).operating_income ?? profitLoss.operatingIncome
-  const depreciation = manualInputs.depreciation
+  const depreciation = manualInputs?.depreciation ?? 0
+
+  console.log('🔍 EBITDA計算:', {
+    operatingIncome,
+    depreciation,
+    ebitda: operatingIncome !== undefined && operatingIncome !== null ? operatingIncome + depreciation : null
+  })
 
   if (operatingIncome === undefined || operatingIncome === null) return null
-  if (!depreciation) return operatingIncome // 減価償却費がない場合は営業利益のみ
 
   return operatingIncome + depreciation
 }
@@ -96,7 +101,13 @@ export function calculateEbitda(data: PeriodFinancialData): number | null {
  */
 export function calculateFcf(data: PeriodFinancialData): number | null {
   const ebitda = calculateEbitda(data)
-  const capex = data.manualInputs.capex ?? 0
+  const capex = data.manualInputs?.capex ?? 0
+
+  console.log('🔍 FCF計算:', {
+    ebitda,
+    capex,
+    fcf: ebitda !== null ? ebitda - capex : null
+  })
 
   if (ebitda === null) return null
 
@@ -613,4 +624,81 @@ export function calculateEbitdaCAGR(periods: PeriodFinancialData[]): number | nu
 
   const years = periods.length - 1
   return calculateCAGR(startEbitda, endEbitda, years)
+}
+
+/**
+ * account_detailsから減価償却費を自動集計
+ * 販売費及び一般管理費と製造原価報告書の明細から「減価償却費」を含む項目を抽出して合計
+ */
+export function calculateDepreciationFromAccountDetails(data: PeriodFinancialData): number {
+  const { accountDetails } = data
+
+  if (!accountDetails || accountDetails.length === 0) return 0
+
+  // 勘定科目名に「減価償却」「償却」を含む項目を抽出して合計
+  const depreciationTotal = accountDetails
+    .filter(detail => {
+      const itemName = detail.itemName?.toLowerCase() || ''
+      return itemName.includes('減価償却') ||
+             itemName.includes('償却費') ||
+             itemName.includes('depreciation')
+    })
+    .reduce((sum, detail) => sum + (detail.amount || 0), 0)
+
+  console.log('🔍 減価償却費自動集計:', {
+    accountDetailsCount: accountDetails.length,
+    depreciationItems: accountDetails.filter(d => {
+      const itemName = d.itemName?.toLowerCase() || ''
+      return itemName.includes('減価償却') || itemName.includes('償却費')
+    }),
+    total: depreciationTotal
+  })
+
+  return depreciationTotal
+}
+
+/**
+ * CAPEX（設備投資額）を自動計算
+ * 計算式: (当期の有形固定資産 + 無形固定資産) + 減価償却費 + 固定資産売却簿価 - (前期の有形固定資産 + 無形固定資産)
+ */
+export function calculateCapexAuto(
+  currentPeriod: PeriodFinancialData,
+  previousPeriod: PeriodFinancialData | null
+): number | null {
+  if (!previousPeriod) {
+    console.log('🔍 CAPEX自動計算: 前期データなし、計算不可')
+    return null
+  }
+
+  const currentBS = currentPeriod.balanceSheet as DbBalanceSheet
+  const previousBS = previousPeriod.balanceSheet as DbBalanceSheet
+
+  // 当期の有形固定資産 + 無形固定資産
+  const currentTangible = currentBS.tangible_fixed_assets ?? currentPeriod.balanceSheet.tangibleFixedAssets ?? 0
+  const currentIntangible = currentBS.intangible_fixed_assets ?? currentPeriod.balanceSheet.intangibleAssets ?? 0
+  const currentFixedAssets = currentTangible + currentIntangible
+
+  // 前期の有形固定資産 + 無形固定資産
+  const previousTangible = previousBS.tangible_fixed_assets ?? previousPeriod.balanceSheet.tangibleFixedAssets ?? 0
+  const previousIntangible = previousBS.intangible_fixed_assets ?? previousPeriod.balanceSheet.intangibleAssets ?? 0
+  const previousFixedAssets = previousTangible + previousIntangible
+
+  // 減価償却費
+  const depreciation = currentPeriod.manualInputs?.depreciation ?? 0
+
+  // 固定資産売却簿価
+  const disposalValue = currentPeriod.manualInputs?.fixedAssetDisposalValue ?? 0
+
+  // CAPEX = (当期固定資産合計) + 減価償却費 + 固定資産売却簿価 - (前期固定資産合計)
+  const capex = currentFixedAssets + depreciation + disposalValue - previousFixedAssets
+
+  console.log('🔍 CAPEX自動計算:', {
+    currentFixedAssets: { tangible: currentTangible, intangible: currentIntangible, total: currentFixedAssets },
+    previousFixedAssets: { tangible: previousTangible, intangible: previousIntangible, total: previousFixedAssets },
+    depreciation,
+    disposalValue,
+    capex
+  })
+
+  return capex >= 0 ? capex : 0 // 負の値の場合は0を返す
 }

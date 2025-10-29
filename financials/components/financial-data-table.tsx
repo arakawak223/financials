@@ -36,9 +36,21 @@ export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTab
     value: string
   ) => {
     const newPeriods = [...editedPeriods]
-    const numValue = parseFloat(value.replace(/,/g, '')) || 0
+
+    // manualInputsが存在しない場合は初期化
+    if (section === 'manualInputs' && !newPeriods[periodIndex].manualInputs) {
+      newPeriods[periodIndex].manualInputs = {}
+    }
+
+    // 空文字の場合はundefined、それ以外は数値に変換
+    const cleanedValue = value.replace(/,/g, '').trim()
+    const numValue = cleanedValue === '' ? undefined : parseFloat(cleanedValue)
+
+    // NaNの場合は0として扱う
+    const finalValue = numValue !== undefined && !isNaN(numValue) ? numValue : (cleanedValue === '' ? undefined : 0)
+
     const sectionData = newPeriods[periodIndex][section] as Record<string, number | undefined>
-    sectionData[field] = numValue
+    sectionData[field] = finalValue
     setEditedPeriods(newPeriods)
   }
 
@@ -326,32 +338,49 @@ export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTab
               </tr>
             </thead>
             <tbody>
-              {[
-                { key: 'depreciation', label: '減価償却費' },
-                { key: 'capex', label: '設備投資額' },
-              ].map((item) => (
-                <tr key={item.key} className="border-b hover:bg-gray-50">
-                  <td className="p-2">{item.label}</td>
-                  {editedPeriods.map((period, index) => (
-                    <td key={period.fiscalYear} className="p-2 text-right">
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          className="w-full text-right border rounded px-2 py-1"
-                          value={
-                            (period.manualInputs as Record<string, number | undefined>)[item.key]?.toLocaleString() || ''
-                          }
-                          onChange={(e) =>
-                            updateValue(index, 'manualInputs', item.key, e.target.value)
-                          }
-                        />
-                      ) : (
-                        formatValue((period.manualInputs as Record<string, number | undefined>)[item.key])
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {/* 減価償却費（自動計算） */}
+              <tr className="border-b hover:bg-gray-50 bg-blue-50">
+                <td className="p-2">減価償却費（自動計算）</td>
+                {editedPeriods.map((period) => (
+                  <td key={period.fiscalYear} className="p-2 text-right text-blue-700 font-medium">
+                    {formatValue(period.manualInputs?.depreciation)}
+                  </td>
+                ))}
+              </tr>
+
+              {/* 設備投資額（自動計算） */}
+              <tr className="border-b hover:bg-gray-50 bg-blue-50">
+                <td className="p-2">設備投資額（自動計算）</td>
+                {editedPeriods.map((period) => (
+                  <td key={period.fiscalYear} className="p-2 text-right text-blue-700 font-medium">
+                    {formatValue(period.manualInputs?.capex)}
+                  </td>
+                ))}
+              </tr>
+
+              {/* 固定資産売却簿価（手入力） */}
+              <tr className="border-b hover:bg-gray-50">
+                <td className="p-2">固定資産売却簿価</td>
+                {editedPeriods.map((period, index) => (
+                  <td key={period.fiscalYear} className="p-2 text-right">
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        className="w-full text-right border rounded px-2 py-1"
+                        value={
+                          period.manualInputs?.fixedAssetDisposalValue?.toLocaleString() || ''
+                        }
+                        onChange={(e) =>
+                          updateValue(index, 'manualInputs', 'fixedAssetDisposalValue', e.target.value)
+                        }
+                        placeholder="0"
+                      />
+                    ) : (
+                      formatValue(period.manualInputs?.fixedAssetDisposalValue)
+                    )}
+                  </td>
+                ))}
+              </tr>
             </tbody>
           </table>
         </div>
