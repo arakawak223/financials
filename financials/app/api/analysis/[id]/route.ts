@@ -1,8 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import type { FinancialAnalysis, PeriodFinancialData } from '@/lib/types/financial'
+import type { FinancialAnalysis, PeriodFinancialData, AccountType } from '@/lib/types/financial'
 
 export const dynamic = 'force-dynamic';
+
+// スネークケースをキャメルケースに変換するヘルパー関数
+function snakeToCamel(str: string): string {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())
+}
+
+function convertKeysToCamelCase<T = any>(obj: Record<string, any> | null | undefined): T {
+  if (!obj || typeof obj !== 'object') return {} as T
+
+  const result: Record<string, any> = {}
+  for (const [key, value] of Object.entries(obj)) {
+    const camelKey = snakeToCamel(key)
+    result[camelKey] = value
+  }
+  return result as T
+}
 
 export async function GET(
   request: NextRequest,
@@ -58,18 +74,21 @@ export async function GET(
         balance_sheet_items(*),
         profit_loss_items(*),
         manual_inputs(*),
+        account_details(*),
         financial_metrics(*)
       `
       )
       .eq('analysis_id', analysisId)
       .order('fiscal_year', { ascending: true })
 
-    console.log('📊 Periods data fetched:', periodsData?.length, 'periods')
+    console.log('📊 GET API: Periods data fetched:', periodsData?.length, 'periods')
     if (periodsData && periodsData.length > 0) {
       periodsData.forEach((p, i) => {
-        console.log(`Period ${i + 1} (${p.fiscal_year}):`)
-        console.log('  - balance_sheet_items:', Array.isArray(p.balance_sheet_items) ? p.balance_sheet_items.length : 'not array', p.balance_sheet_items)
-        console.log('  - profit_loss_items:', Array.isArray(p.profit_loss_items) ? p.profit_loss_items.length : 'not array', p.profit_loss_items)
+        console.log(`📊 GET API: Period ${i + 1} (${p.fiscal_year}):`)
+        console.log('  - balance_sheet_items type:', Array.isArray(p.balance_sheet_items) ? 'array' : typeof p.balance_sheet_items)
+        console.log('  - balance_sheet_items:', JSON.stringify(p.balance_sheet_items, null, 2))
+        console.log('  - profit_loss_items type:', Array.isArray(p.profit_loss_items) ? 'array' : typeof p.profit_loss_items)
+        console.log('  - profit_loss_items:', JSON.stringify(p.profit_loss_items, null, 2))
         console.log('  - manual_inputs:', Array.isArray(p.manual_inputs) ? p.manual_inputs.length : 'not array', p.manual_inputs)
       })
     }
@@ -102,13 +121,31 @@ export async function GET(
 
       // balance_sheet_itemsとprofit_loss_itemsは、UNIQUE制約があるため
       // 配列またはオブジェクトとして返される可能性がある
-      const balanceSheetData = Array.isArray(p.balance_sheet_items)
+      const balanceSheetRaw = Array.isArray(p.balance_sheet_items)
         ? (p.balance_sheet_items.length > 0 ? p.balance_sheet_items[0] : {})
         : (p.balance_sheet_items || {})
 
-      const profitLossData = Array.isArray(p.profit_loss_items)
+      const profitLossRaw = Array.isArray(p.profit_loss_items)
         ? (p.profit_loss_items.length > 0 ? p.profit_loss_items[0] : {})
         : (p.profit_loss_items || {})
+
+      // スネークケースからキャメルケースに変換
+      const balanceSheetData = convertKeysToCamelCase<PeriodFinancialData['balanceSheet']>(balanceSheetRaw)
+      const profitLossData = convertKeysToCamelCase<PeriodFinancialData['profitLoss']>(profitLossRaw)
+
+      console.log(`📊 GET API: Converted data for ${p.fiscal_year}:`)
+      console.log('  - balanceSheetData keys:', Object.keys(balanceSheetData))
+      console.log('  - balanceSheetData:', JSON.stringify(balanceSheetData, null, 2))
+      console.log('  - profitLossData keys:', Object.keys(profitLossData))
+      console.log('  - profitLossData:', JSON.stringify(profitLossData, null, 2))
+
+      // account_detailsを変換
+      const accountDetails = (Array.isArray(p.account_details) ? p.account_details : []).map((detail: any) => ({
+        accountType: (detail.account_category || 'other') as AccountType,
+        itemName: detail.account_name,
+        amount: detail.amount,
+        note: detail.notes,
+      }))
 
       return {
         fiscalYear: p.fiscal_year,
@@ -123,11 +160,15 @@ export async function GET(
           capex: Array.isArray(p.manual_inputs)
             ? p.manual_inputs.find((m: { input_type: string; amount?: number }) => m.input_type === 'capex')?.amount
             : undefined,
+          fixedAssetDisposalValue: Array.isArray(p.manual_inputs)
+            ? p.manual_inputs.find((m: { input_type: string; amount?: number }) => m.input_type === 'fixed_asset_disposal_value')?.amount
+            : undefined,
         },
-        accountDetails: [],
+        accountDetails,
         metrics: rawMetrics ? {
           netCash: rawMetrics.net_cash,
           currentRatio: rawMetrics.current_ratio,
+          equityRatio: rawMetrics.equity_ratio,
           receivablesTurnoverMonths: rawMetrics.accounts_receivable_turnover_months,
           inventoryTurnoverMonths: rawMetrics.inventory_turnover_months,
           ebitda: rawMetrics.ebitda,
@@ -185,6 +226,19 @@ export async function GET(
       createdAt: new Date(analysis.created_at),
       updatedAt: new Date(analysis.updated_at),
     }
+
+    console.log('📊 GET API: Final response being sent to frontend:')
+    console.log('  - periods count:', financialAnalysis.periods.length)
+    financialAnalysis.periods.forEach((period, i) => {
+      console.log(`  - Period ${i + 1} (${period.fiscalYear}):`)
+      console.log('    - balanceSheet keys:', Object.keys(period.balanceSheet || {}))
+      console.log('    - profitLoss keys:', Object.keys(period.profitLoss || {}))
+      if (period.profitLoss) {
+        console.log('    - profitLoss.netSales:', period.profitLoss.netSales)
+        console.log('    - profitLoss.costOfSales:', period.profitLoss.costOfSales)
+        console.log('    - profitLoss.grossProfit:', period.profitLoss.grossProfit)
+      }
+    })
 
     return NextResponse.json({ success: true, analysis: financialAnalysis })
   } catch (error) {

@@ -175,9 +175,9 @@ export default function NewAnalysisPage() {
         throw new Error('分析の実行に失敗しました')
       }
 
-      // 分析詳細ページに遷移
+      // 分析詳細ページに遷移（ハードリロードで最新データを取得）
       setProcessingStatus('完了！')
-      router.push(`/analysis/${analysisId}`)
+      window.location.href = `/analysis/${analysisId}`
     } catch (error) {
       console.error('Error creating analysis:', error)
       alert(error instanceof Error ? error.message : '分析の作成に失敗しました')

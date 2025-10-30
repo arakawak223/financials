@@ -59,25 +59,25 @@ export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTab
   // 「その他」科目の計算関数
   const calculateOtherCurrentAssets = (period: PeriodFinancialData): number => {
     const bs = period.balanceSheet as Record<string, number | undefined>
-    const total = bs.current_assets_total || 0
-    const cash = bs.cash_and_deposits || 0
-    const receivables = bs.accounts_receivable || 0
+    const total = bs.currentAssetsTotal || 0
+    const cash = bs.cashAndDeposits || 0
+    const receivables = bs.accountsReceivable || 0
     const inventory = bs.inventory || 0
     return Math.max(0, total - cash - receivables - inventory)
   }
 
   const calculateOtherCurrentLiabilities = (period: PeriodFinancialData): number => {
     const bs = period.balanceSheet as Record<string, number | undefined>
-    const total = bs.current_liabilities_total || 0
-    const payables = bs.accounts_payable || 0
-    const borrowings = bs.short_term_borrowings || 0
+    const total = bs.currentLiabilitiesTotal || 0
+    const payables = bs.accountsPayable || 0
+    const borrowings = bs.shortTermBorrowings || 0
     return Math.max(0, total - payables - borrowings)
   }
 
   const calculateOtherFixedLiabilities = (period: PeriodFinancialData): number => {
     const bs = period.balanceSheet as Record<string, number | undefined>
-    const total = bs.fixed_liabilities_total || 0
-    const borrowings = bs.long_term_borrowings || 0
+    const total = bs.fixedLiabilitiesTotal || 0
+    const borrowings = bs.longTermBorrowings || 0
     return Math.max(0, total - borrowings)
   }
 
@@ -131,23 +131,23 @@ export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTab
                 </td>
               </tr>
               {[
-                { key: 'cash_and_deposits', label: '現金預金', editable: true },
-                { key: 'accounts_receivable', label: '売掛金', editable: true },
+                { key: 'cashAndDeposits', label: '現金預金', editable: true },
+                { key: 'accountsReceivable', label: '売掛金', editable: true },
                 { key: 'inventory', label: '棚卸資産', editable: true },
-                { key: 'other_current_assets', label: 'その他流動資産', editable: false, calculated: true },
-                { key: 'current_assets_total', label: '流動資産合計', editable: true },
-                { key: 'tangible_fixed_assets', label: '有形固定資産', editable: true },
-                { key: 'intangible_fixed_assets', label: '無形固定資産', editable: true },
-                { key: 'investments_and_other_assets', label: '投資その他の資産', editable: true },
-                { key: 'fixed_assets_total', label: '固定資産合計', editable: true },
-                { key: 'total_assets', label: '資産合計', editable: true },
+                { key: 'otherCurrentAssets', label: 'その他流動資産', editable: false, calculated: true },
+                { key: 'currentAssetsTotal', label: '流動資産合計', editable: true },
+                { key: 'tangibleFixedAssets', label: '有形固定資産', editable: true },
+                { key: 'intangibleFixedAssets', label: '無形固定資産', editable: true },
+                { key: 'investmentsAndOtherAssets', label: '投資その他の資産', editable: true },
+                { key: 'fixedAssetsTotal', label: '固定資産合計', editable: true },
+                { key: 'totalAssets', label: '資産合計', editable: true },
               ].map((item) => (
                 <tr key={item.key} className="border-b hover:bg-gray-50">
                   <td className="p-2">{item.label}</td>
                   {editedPeriods.map((period, index) => {
                     // 計算項目の値を取得
                     let displayValue: number | undefined
-                    if (item.key === 'other_current_assets') {
+                    if (item.key === 'otherCurrentAssets') {
                       displayValue = calculateOtherCurrentAssets(period)
                     } else {
                       displayValue = (period.balanceSheet as Record<string, number | undefined>)[item.key]
@@ -182,23 +182,23 @@ export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTab
                 </td>
               </tr>
               {[
-                { key: 'accounts_payable', label: '買掛金', editable: true },
-                { key: 'short_term_borrowings', label: '短期借入金', editable: true },
-                { key: 'other_current_liabilities', label: 'その他流動負債', editable: false, calculated: true },
-                { key: 'current_liabilities_total', label: '流動負債合計', editable: true },
-                { key: 'long_term_borrowings', label: '長期借入金', editable: true },
-                { key: 'other_fixed_liabilities', label: 'その他固定負債', editable: false, calculated: true },
-                { key: 'fixed_liabilities_total', label: '固定負債合計', editable: true },
-                { key: 'total_liabilities', label: '負債合計', editable: true },
+                { key: 'accountsPayable', label: '買掛金', editable: true },
+                { key: 'shortTermBorrowings', label: '短期借入金', editable: true },
+                { key: 'otherCurrentLiabilities', label: 'その他流動負債', editable: false, calculated: true },
+                { key: 'currentLiabilitiesTotal', label: '流動負債合計', editable: true },
+                { key: 'longTermBorrowings', label: '長期借入金', editable: true },
+                { key: 'otherFixedLiabilities', label: 'その他固定負債', editable: false, calculated: true },
+                { key: 'fixedLiabilitiesTotal', label: '固定負債合計', editable: true },
+                { key: 'totalLiabilities', label: '負債合計', editable: true },
               ].map((item) => (
                 <tr key={item.key} className="border-b hover:bg-gray-50">
                   <td className="p-2">{item.label}</td>
                   {editedPeriods.map((period, index) => {
                     // 計算項目の値を取得
                     let displayValue: number | undefined
-                    if (item.key === 'other_current_liabilities') {
+                    if (item.key === 'otherCurrentLiabilities') {
                       displayValue = calculateOtherCurrentLiabilities(period)
-                    } else if (item.key === 'other_fixed_liabilities') {
+                    } else if (item.key === 'otherFixedLiabilities') {
                       displayValue = calculateOtherFixedLiabilities(period)
                     } else {
                       displayValue = (period.balanceSheet as Record<string, number | undefined>)[item.key]
@@ -233,9 +233,9 @@ export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTab
                 </td>
               </tr>
               {[
-                { key: 'capital_stock', label: '資本金' },
-                { key: 'retained_earnings', label: '利益剰余金' },
-                { key: 'total_net_assets', label: '純資産合計' },
+                { key: 'capitalStock', label: '資本金' },
+                { key: 'retainedEarnings', label: '利益剰余金' },
+                { key: 'totalNetAssets', label: '純資産合計' },
               ].map((item) => (
                 <tr key={item.key} className="border-b hover:bg-gray-50">
                   <td className="p-2">{item.label}</td>
@@ -281,19 +281,19 @@ export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTab
             </thead>
             <tbody>
               {[
-                { key: 'net_sales', label: '売上高' },
-                { key: 'cost_of_sales', label: '売上原価' },
-                { key: 'gross_profit', label: '売上総利益' },
-                { key: 'selling_general_admin_expenses', label: '販管費' },
-                { key: 'operating_income', label: '営業利益' },
-                { key: 'non_operating_income', label: '営業外収益' },
-                { key: 'non_operating_expenses', label: '営業外費用' },
-                { key: 'ordinary_income', label: '経常利益' },
-                { key: 'extraordinary_income', label: '特別利益' },
-                { key: 'extraordinary_losses', label: '特別損失' },
-                { key: 'income_before_tax', label: '税引前当期純利益' },
-                { key: 'income_taxes', label: '法人税等' },
-                { key: 'net_income', label: '当期純利益' },
+                { key: 'netSales', label: '売上高' },
+                { key: 'costOfSales', label: '売上原価' },
+                { key: 'grossProfit', label: '売上総利益' },
+                { key: 'sellingGeneralAdminExpenses', label: '販管費' },
+                { key: 'operatingIncome', label: '営業利益' },
+                { key: 'nonOperatingIncome', label: '営業外収益' },
+                { key: 'nonOperatingExpenses', label: '営業外費用' },
+                { key: 'ordinaryIncome', label: '経常利益' },
+                { key: 'extraordinaryIncome', label: '特別利益' },
+                { key: 'extraordinaryLosses', label: '特別損失' },
+                { key: 'incomeBeforeTax', label: '税引前当期純利益' },
+                { key: 'incomeTaxes', label: '法人税等' },
+                { key: 'netIncome', label: '当期純利益' },
               ].map((item) => (
                 <tr key={item.key} className="border-b hover:bg-gray-50">
                   <td className="p-2">{item.label}</td>

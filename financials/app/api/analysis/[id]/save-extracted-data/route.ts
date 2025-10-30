@@ -18,6 +18,14 @@ export async function POST(
       extractedData: PdfExtractResult
     }
 
+    console.log('💾 save-extracted-data: 受信したデータ')
+    console.log('  fiscalYear:', fiscalYear)
+    console.log('  extractedData.success:', extractedData?.success)
+    console.log('  extractedData.balanceSheet:', JSON.stringify(extractedData?.balanceSheet, null, 2))
+    console.log('  extractedData.profitLoss:', JSON.stringify(extractedData?.profitLoss, null, 2))
+    console.log('  extractedData.accountDetails:', extractedData?.accountDetails?.length, '件')
+    console.log('  extractedData全体のキー:', Object.keys(extractedData || {}))
+
     if (!fiscalYear || !extractedData) {
       return NextResponse.json(
         { error: 'Invalid data' },
@@ -68,35 +76,45 @@ export async function POST(
 
     // BSデータを保存
     if (extractedData.balanceSheet && Object.keys(extractedData.balanceSheet).length > 0) {
+      const bsDataToSave = {
+        period_id: periodId,
+        ...extractedData.balanceSheet,
+      }
+      console.log('💾 BSデータをSupabaseに保存します:')
+      console.log('  period_id:', periodId)
+      console.log('  BSキー:', Object.keys(extractedData.balanceSheet))
+      console.log('  保存するデータ:', JSON.stringify(bsDataToSave, null, 2))
+
       const { error: bsError } = await supabase
         .from('balance_sheet_items')
-        .upsert(
-          {
-            period_id: periodId,
-            ...extractedData.balanceSheet,
-          },
-          { onConflict: 'period_id' }
-        )
+        .upsert(bsDataToSave, { onConflict: 'period_id' })
 
       if (bsError) {
-        console.error('BS save error:', bsError)
+        console.error('❌ BS save error:', bsError)
+      } else {
+        console.log('✅ BS保存成功')
       }
     }
 
     // PLデータを保存
     if (extractedData.profitLoss && Object.keys(extractedData.profitLoss).length > 0) {
+      const plDataToSave = {
+        period_id: periodId,
+        ...extractedData.profitLoss,
+      }
+      console.log('💾 PLデータをSupabaseに保存します:')
+      console.log('  period_id:', periodId)
+      console.log('  PLキー:', Object.keys(extractedData.profitLoss))
+      console.log('  保存するデータ:', JSON.stringify(plDataToSave, null, 2))
+
       const { error: plError } = await supabase
         .from('profit_loss_items')
-        .upsert(
-          {
-            period_id: periodId,
-            ...extractedData.profitLoss,
-          },
-          { onConflict: 'period_id' }
-        )
+        .upsert(plDataToSave, { onConflict: 'period_id' })
 
       if (plError) {
-        console.error('PL save error:', plError)
+        console.error('❌ PL save error:', plError)
+      } else {
+        console.log('✅ PL保存成功')
       }
     }
 
@@ -118,9 +136,9 @@ export async function POST(
       const accountDetailsData = extractedData.accountDetails.map((detail: any) => ({
         period_id: periodId,
         account_category: detail.account_category || detail.accountType || 'other',
-        item_name: detail.account_name || detail.itemName,
+        account_name: detail.account_name || detail.itemName,
         amount: detail.amount,
-        note: detail.note || detail.notes,
+        notes: detail.notes || detail.note,
       }))
 
       const { error: insertError } = await supabase

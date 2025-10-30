@@ -93,9 +93,17 @@ ${ocrText}
    - 「製造原価報告書」の明細がある場合、各項目を抽出
    - 各明細は以下の形式で返してください：
      * account_category: 区分（"selling_general_admin" または "cost_of_sales"）
-     * account_name: 勘定科目名
-     * amount: 金額（数値）
-   - 特に「減価償却費」「償却費」を含む項目は必ず抽出してください
+     * account_name: 勘定科目名（正確に）
+     * amount: その勘定科目の金額（数値、カンマなし）
+
+   - **【超重要】勘定科目名と金額のペアリングルール**:
+     * OCRテキストで科目名が圧縮されている場合があります（例：「役給雑賞法福」は「役員報酬、給料手当、雑給、賞与、法定福利費、福利厚生費」）
+     * その場合、各文字が各科目の頭文字を表します。完全な科目名を推測して、金額リストと正しくペアリングしてください
+     * 【減価償却費の特別注意】「減」の文字を見つけたら、それは「減価償却費」です。その位置に対応する金額を正確に抽出してください
+     * 表形式の場合: 項目名と同じ行の右側にある最初の数値がその項目の金額です
+     * 縦並び形式の場合: 項目名の直下の行にある数値がその項目の金額です
+     * 1行ずつ丁寧に、項目名→金額の順に読み取ってください
+     * 金額リストの順序と科目名の順序を必ず一致させてください
 
 4. 数値はカンマやスペースを除去して整数で返してください
 5. 見つからない項目は省略してください（nullや0を入れないでください）
@@ -117,13 +125,15 @@ ${ocrText}
   "accountDetails": [
     {
       "account_category": "selling_general_admin",
-      "account_name": "減価償却費",
-      "amount": 数値
+      "account_name": "勘定科目名",
+      "amount": 金額
     },
     ...
   ],
   "summary": "財務状況の要約（150文字程度）"
-}`,
+}
+
+**重要**: 各勘定科目の項目名とその直後・直下にある金額を正確にペアリングしてください。`,
         },
       ],
     })
@@ -148,12 +158,61 @@ ${ocrText}
     // JSONをパース
     const result = JSON.parse(jsonText.trim())
 
+    // 【補正ロジック】OCRテキストから勘定科目の横にある数値を直接抽出して補正
+    if (result.accountDetails && Array.isArray(result.accountDetails)) {
+      console.log('🔧 減価償却費の金額を補正します...')
+
+      // 減価償却費を含む項目を特定
+      const depreciationIndex = result.accountDetails.findIndex((d: any) =>
+        d.account_name?.includes('減価償却') || d.account_name?.includes('償却費')
+      )
+
+      if (depreciationIndex >= 0) {
+        const depreciationItem = result.accountDetails[depreciationIndex]
+        const depreciationName = depreciationItem.account_name
+
+        console.log('  元の減価償却費:', depreciationItem)
+
+        // OCRテキストから「減価償却費」の直後（横並び）の数値を抽出
+        // パターン: 「減価償却費」+ 任意の空白・記号 + 数値（カンマ区切り）
+        const pattern = new RegExp(
+          depreciationName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + // 勘定科目名をエスケープ
+          '[\\s　]*' + // 空白（半角・全角）
+          '([\\d,，]+)', // 数値（カンマ区切り含む）
+          'i'
+        )
+
+        const match = ocrText.match(pattern)
+
+        if (match && match[1]) {
+          // 抽出した数値からカンマを除去して整数に変換
+          const correctedAmount = parseInt(match[1].replace(/[,，]/g, ''), 10)
+
+          if (!isNaN(correctedAmount) && correctedAmount !== depreciationItem.amount) {
+            console.log('  ✅ 補正後の減価償却費:', correctedAmount, '（元:', depreciationItem.amount, '）')
+            result.accountDetails[depreciationIndex].amount = correctedAmount
+          } else {
+            console.log('  ℹ️  補正不要（既に正しい値）')
+          }
+        } else {
+          console.log('  ⚠️  OCRテキストから減価償却費の横の数値を抽出できませんでした')
+        }
+      }
+    }
+
     console.log('✅ 財務データ抽出成功')
     console.log('📊 BS項目数:', Object.keys(result.balanceSheet || {}).length)
     console.log('📊 PL項目数:', Object.keys(result.profitLoss || {}).length)
     console.log('📊 勘定科目明細数:', (result.accountDetails || []).length)
     if (result.accountDetails && result.accountDetails.length > 0) {
       console.log('📝 明細項目:', result.accountDetails.map((d: any) => d.account_name).join(', '))
+      // 減価償却費の詳細をログ出力
+      const depreciationItems = result.accountDetails.filter((d: any) =>
+        d.account_name?.includes('減価償却') || d.account_name?.includes('償却費')
+      )
+      if (depreciationItems.length > 0) {
+        console.log('🔍 減価償却費の詳細（補正後）:', JSON.stringify(depreciationItems, null, 2))
+      }
     }
 
     return NextResponse.json({
