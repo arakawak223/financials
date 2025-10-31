@@ -25,6 +25,14 @@ export async function POST(request: NextRequest) {
     // Google Vision APIでOCR
     const result = await extractTextWithGoogleVision(buffer)
 
+    // OCRテキスト全体をログ出力（デバッグ用）
+    console.log('\n========== OCRテキスト全体 ==========')
+    result.text.forEach((page, idx) => {
+      console.log(`\n--- ページ ${idx + 1} ---`)
+      console.log(page)
+    })
+    console.log('\n========================================\n')
+
     return NextResponse.json({
       success: true,
       text: result.text,

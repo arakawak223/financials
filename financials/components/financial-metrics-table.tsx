@@ -40,6 +40,12 @@ export function FinancialMetricsTable({ periods, unit }: FinancialMetricsTablePr
           format: (v: number | null | undefined) => v !== null && v !== undefined ? `${v.toFixed(1)}%` : '-',
           description: '流動資産 ÷ 流動負債 × 100',
         },
+        {
+          label: '自己資本比率',
+          key: 'equityRatio',
+          format: (v: number | null | undefined) => v !== null && v !== undefined ? `${v.toFixed(1)}%` : '-',
+          description: '自己資本 ÷ 総資産 × 100',
+        },
       ],
     },
     {

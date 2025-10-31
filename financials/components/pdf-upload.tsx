@@ -28,12 +28,38 @@ export function PdfUpload({ onFilesUploaded, expectedFiles }: PdfUploadProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileInfo[]>([])
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const newFiles: UploadedFileInfo[] = acceptedFiles.map((file) => ({
-      file,
-      fileType: 'financial_statement', // デフォルト、後で選択可能にする
-      fiscalYear: new Date().getFullYear(), // デフォルト、後で選択可能にする
-      status: 'pending' as const,
-    }))
+    const newFiles: UploadedFileInfo[] = acceptedFiles.map((file) => {
+      // ファイル名から年度を自動判定
+      let fiscalYear = new Date().getFullYear()
+
+      // パターン: R7.7期 → 令和7年7月期
+      const reiwaMatch = file.name.match(/R(\d+)\.(\d+)期/)
+      if (reiwaMatch) {
+        const reiwaYear = parseInt(reiwaMatch[1], 10)
+        const month = parseInt(reiwaMatch[2], 10)
+
+        // 令和年号を西暦に変換（令和元年=2019年）
+        const seirekiYear = reiwaYear + 2018
+
+        // 年度の計算:
+        // - 決算月が7月の場合、年度 = 決算年 - 1
+        // - 一般的に、決算月 <= 7 の場合は前年度開始
+        if (month <= 7) {
+          fiscalYear = seirekiYear - 1
+        } else {
+          fiscalYear = seirekiYear
+        }
+
+        console.log(`📅 ファイル名から年度判定: ${file.name} → R${reiwaYear}(${seirekiYear}年).${month}月期 → ${fiscalYear}年度`)
+      }
+
+      return {
+        file,
+        fileType: 'financial_statement', // デフォルト、後で選択可能にする
+        fiscalYear,
+        status: 'pending' as const,
+      }
+    })
 
     setUploadedFiles((prev) => [...prev, ...newFiles])
   }, [])

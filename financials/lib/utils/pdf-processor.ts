@@ -109,44 +109,28 @@ export async function extractFinancialDataFromPdf(
   console.log(`📄 extractFinancialDataFromPdf 開始:`, { fileName: file.name, fileType, fiscalYear, fileSize: file.size })
 
   try {
-    // まずデジタルPDFとして直接テキスト抽出を試みる
-    console.log(`📖 デジタルPDFとしてテキスト抽出を試行...`)
-    const textPages = await extractTextFromPdf(file)
-    const directTextLength = textPages.join('').length
-    console.log(`📝 直接抽出された文字数: ${directTextLength}`)
+    // Google Vision API で OCR 処理（デジタルPDF抽出は常に0文字のためスキップ）
+    console.log(`🔧 Google Cloud Vision API による OCR 処理を開始...`)
 
-    let finalTextPages: string[]
-    let confidence: number
+    // APIルート経由でVision API OCRを実行
+    const formData = new FormData()
+    formData.append('file', file)
 
-    // テキストがほとんど抽出できない場合はGoogle Vision APIでOCR
-    if (directTextLength < 100) {
-      console.log(`⚠️  デジタルPDFとしてのテキスト抽出失敗（文字数: ${directTextLength}）`)
-      console.log(`🔧 Google Cloud Vision API による OCR 処理に切り替えます...`)
+    const ocrResponse = await fetch('/api/ocr/vision', {
+      method: 'POST',
+      body: formData,
+    })
 
-      // APIルート経由でVision API OCRを実行
-      const formData = new FormData()
-      formData.append('file', file)
-
-      const ocrResponse = await fetch('/api/ocr/vision', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!ocrResponse.ok) {
-        const errorData = await ocrResponse.json()
-        throw new Error(errorData.error || 'Vision API OCR に失敗しました')
-      }
-
-      const ocrResult = await ocrResponse.json()
-      finalTextPages = ocrResult.text
-      confidence = ocrResult.confidence
-
-      console.log(`✅ Vision API OCR完了: pages=${finalTextPages.length}, 総文字数=${finalTextPages.join('').length}, confidence=${confidence}`)
-    } else {
-      console.log(`✅ デジタルPDFとして正常にテキスト抽出完了`)
-      finalTextPages = textPages
-      confidence = 1.0
+    if (!ocrResponse.ok) {
+      const errorData = await ocrResponse.json()
+      throw new Error(errorData.error || 'Vision API OCR に失敗しました')
     }
+
+    const ocrResult = await ocrResponse.json()
+    const finalTextPages = ocrResult.text
+    const confidence = ocrResult.confidence
+
+    console.log(`✅ Vision API OCR完了: pages=${finalTextPages.length}, 総文字数=${finalTextPages.join('').length}, confidence=${confidence}`)
 
     // テキストから財務データを解析
     console.log(`🔬 財務データ解析開始...`)
@@ -200,6 +184,7 @@ async function parseFinancialData(
       return {
         balanceSheet: aiResult.balanceSheet,
         profitLoss: aiResult.profitLoss,
+        accountDetails: aiResult.accountDetails,
         summary: aiResult.summary,
       }
     } catch (error) {

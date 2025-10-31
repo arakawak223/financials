@@ -4,7 +4,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { calculateAllMetrics, calculateDepreciationFromAccountDetails, calculateCapexAuto } from '@/lib/utils/financial-calculations'
 import { generateAnalysisComments } from '@/lib/utils/ai-comment-generator'
-import type { FinancialAnalysis, PeriodFinancialData } from '@/lib/types/financial'
+import type { FinancialAnalysis, PeriodFinancialData, AccountType } from '@/lib/types/financial'
+
+// スネークケースをキャメルケースに変換するヘルパー関数
+function snakeToCamel(str: string): string {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())
+}
+
+function convertKeysToCamelCase<T = any>(obj: Record<string, any> | null | undefined): T {
+  if (!obj || typeof obj !== 'object') return {} as T
+
+  const result: Record<string, any> = {}
+  for (const [key, value] of Object.entries(obj)) {
+    const camelKey = snakeToCamel(key)
+    result[camelKey] = value
+  }
+  return result as T
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -88,25 +104,38 @@ export async function POST(request: NextRequest) {
       account_details?: Array<{ account_category: string; account_name: string; amount?: number; notes?: string }>
     }
 
+    console.log('📊 DBから取得した期間データ:', JSON.stringify(periodsData, null, 2))
+
     const periods: PeriodFinancialData[] = periodsData.map((p: PeriodData) => {
+      console.log(`\n🔍 年度 ${p.fiscal_year} のデータ変換:`)
+      console.log('  balance_sheet_items:', JSON.stringify(p.balance_sheet_items))
+      console.log('  profit_loss_items:', JSON.stringify(p.profit_loss_items))
+
       // balance_sheet_itemsとprofit_loss_itemsは、UNIQUE制約があるため
       // 配列またはオブジェクトとして返される可能性がある
-      const balanceSheetData = Array.isArray(p.balance_sheet_items)
+      const balanceSheetRaw = Array.isArray(p.balance_sheet_items)
         ? (p.balance_sheet_items.length > 0 ? p.balance_sheet_items[0] : {})
         : (p.balance_sheet_items || {})
 
-      const profitLossData = Array.isArray(p.profit_loss_items)
+      const profitLossRaw = Array.isArray(p.profit_loss_items)
         ? (p.profit_loss_items.length > 0 ? p.profit_loss_items[0] : {})
         : (p.profit_loss_items || {})
+
+      // スネークケースからキャメルケースに変換
+      const balanceSheetData = convertKeysToCamelCase<PeriodFinancialData['balanceSheet']>(balanceSheetRaw)
+      const profitLossData = convertKeysToCamelCase<PeriodFinancialData['profitLoss']>(profitLossRaw)
+
+      console.log('  変換後 balanceSheetData:', JSON.stringify(balanceSheetData))
+      console.log('  変換後 profitLossData:', JSON.stringify(profitLossData))
 
       const fixedAssetDisposalValue = p.manual_inputs?.find((m) => m.input_type === 'fixed_asset_disposal_value')?.amount
 
       // account_detailsを変換
       const accountDetails = (p.account_details || []).map((detail) => ({
-        accountType: detail.account_type || 'other' as const,
-        itemName: detail.item_name,
+        accountType: (detail.account_category || 'other') as AccountType,
+        itemName: detail.account_name,
         amount: detail.amount,
-        note: detail.note,
+        note: detail.notes,
       }))
 
       console.log(`📊 期間 ${p.fiscal_year} のデータ:`, {
@@ -118,8 +147,8 @@ export async function POST(request: NextRequest) {
         fiscalYear: p.fiscal_year,
         periodStartDate: p.period_start_date ? new Date(p.period_start_date) : undefined,
         periodEndDate: p.period_end_date ? new Date(p.period_end_date) : undefined,
-        balanceSheet: balanceSheetData as PeriodFinancialData['balanceSheet'],
-        profitLoss: profitLossData as PeriodFinancialData['profitLoss'],
+        balanceSheet: balanceSheetData,
+        profitLoss: profitLossData,
         manualInputs: {
           depreciation: 0, // 後で自動計算
           capex: 0,        // 後で自動計算
@@ -288,6 +317,17 @@ export async function POST(request: NextRequest) {
     if (!skipComments) {
       try {
         console.log('🤖 AI分析コメント生成開始...')
+        console.log('📊 AIコメント生成に渡すデータ:')
+        console.log('  企業名:', financialAnalysis.companyName)
+        console.log('  期間:', financialAnalysis.fiscalYearStart, '〜', financialAnalysis.fiscalYearEnd)
+        console.log('  期間数:', financialAnalysis.periods.length)
+        financialAnalysis.periods.forEach((p, i) => {
+          console.log(`\n  期間 ${i + 1} (${p.fiscalYear}年度):`)
+          console.log('    BS netSales:', p.profitLoss?.netSales)
+          console.log('    PL operatingIncome:', p.profitLoss?.operatingIncome)
+          console.log('    PL netIncome:', p.profitLoss?.netIncome)
+          console.log('    metrics:', p.metrics ? Object.keys(p.metrics) : 'なし')
+        })
         const comments = await generateAnalysisComments(financialAnalysis)
         console.log('✅ コメント生成完了:', comments.length, '件')
 

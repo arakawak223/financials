@@ -1,8 +1,10 @@
 // AI（Claude）を使った財務データ抽出ユーティリティ
+import type { AccountDetail } from '../types/financial'
 
 export interface AIExtractionResult {
   balanceSheet: Record<string, number>
   profitLoss: Record<string, number>
+  accountDetails?: AccountDetail[]
   confidence: number
   summary?: string
 }
@@ -37,10 +39,12 @@ export async function extractFinancialDataWithAI(
     console.log('✅ 財務データ抽出成功（API Route経由）')
     console.log('📊 BS項目数:', Object.keys(result.balanceSheet || {}).length)
     console.log('📊 PL項目数:', Object.keys(result.profitLoss || {}).length)
+    console.log('📊 勘定科目明細数:', (result.accountDetails || []).length)
 
     return {
       balanceSheet: result.balanceSheet || {},
       profitLoss: result.profitLoss || {},
+      accountDetails: result.accountDetails || [],
       confidence: result.confidence || 0.95,
       summary: result.summary,
     }
@@ -70,6 +74,7 @@ export async function extractFinancialDataHybrid(
     return {
       balanceSheet: fallbackResult.balanceSheet,
       profitLoss: fallbackResult.profitLoss,
+      accountDetails: [], // フォールバックでは勘定科目明細は抽出できない
       confidence: 0.5, // フォールバック時は信頼度を下げる
     }
   }

@@ -262,10 +262,10 @@ export async function POST(request: NextRequest) {
       if (period.accountDetails && period.accountDetails.length > 0) {
         const accountDetailsData = period.accountDetails.map((detail) => ({
           period_id: periodId,
-          account_type: detail.accountType,
-          item_name: detail.itemName,
+          account_category: detail.accountType,
+          account_name: detail.itemName,
           amount: detail.amount,
-          note: detail.note,
+          notes: detail.note,
         }))
 
         const { error: detailsError } = await supabase
