@@ -1,14 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { PdfUpload } from '@/components/pdf-upload'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 
 type Step = 'company' | 'period' | 'upload' | 'review'
+
+interface AccountFormat {
+  id: string
+  name: string
+  description: string | null
+  is_shared: boolean
+}
 
 export default function NewAnalysisPage() {
   const router = useRouter()
@@ -19,6 +33,8 @@ export default function NewAnalysisPage() {
   // フォームデータ
   const [companyName, setCompanyName] = useState('')
   const [industryId, setIndustryId] = useState('')
+  const [formatId, setFormatId] = useState('')
+  const [formats, setFormats] = useState<AccountFormat[]>([])
   const [fiscalYearStart, setFiscalYearStart] = useState(new Date().getFullYear() - 2)
   const [fiscalYearEnd, setFiscalYearEnd] = useState(new Date().getFullYear())
   const [uploadedFiles, setUploadedFiles] = useState<
@@ -45,6 +61,22 @@ export default function NewAnalysisPage() {
       label: `${year}年度 勘定科目内訳書`,
     })
   }
+
+  // 利用可能なフォーマット一覧を取得
+  useEffect(() => {
+    const fetchFormats = async () => {
+      try {
+        const response = await fetch('/api/account-formats')
+        if (response.ok) {
+          const data = await response.json()
+          setFormats(data.formats || [])
+        }
+      } catch (err) {
+        console.error('フォーマットの取得に失敗しました:', err)
+      }
+    }
+    fetchFormats()
+  }, [])
 
   const handleNext = () => {
     const steps: Step[] = ['company', 'period', 'upload', 'review']
@@ -74,6 +106,7 @@ export default function NewAnalysisPage() {
         body: JSON.stringify({
           companyName,
           industryId: industryId || null,
+          formatId: formatId || null,
           fiscalYearStart,
           fiscalYearEnd,
         }),
@@ -277,6 +310,27 @@ export default function NewAnalysisPage() {
                   <option value="other">その他</option>
                 </select>
               </div>
+
+              <div>
+                <Label htmlFor="format">科目体系フォーマット</Label>
+                <Select value={formatId || '__none__'} onValueChange={(value) => setFormatId(value === '__none__' ? '' : value)}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="フォーマットを選択（任意）" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">使用しない</SelectItem>
+                    {formats.map((format) => (
+                      <SelectItem key={format.id} value={format.id}>
+                        {format.name}
+                        {format.description ? ` - ${format.description}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  科目体系フォーマットを選択すると、売上高・売上原価の詳細入力が簡単になります
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -378,6 +432,15 @@ export default function NewAnalysisPage() {
                         other: 'その他',
                       }[industryId]
                     : '未選択'}
+                </p>
+              </div>
+
+              <div className="border-b pb-3">
+                <p className="text-sm text-gray-600">科目体系フォーマット</p>
+                <p className="text-lg font-medium">
+                  {formatId
+                    ? formats.find((f) => f.id === formatId)?.name || '不明なフォーマット'
+                    : '使用しない'}
                 </p>
               </div>
 

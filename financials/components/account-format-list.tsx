@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Share2, Lock } from 'lucide-react'
+import { Plus, Edit, Trash2, Share2, Lock, Copy } from 'lucide-react'
 
 interface AccountFormat {
   id: string
@@ -96,6 +96,44 @@ export function AccountFormatList({
       // リストから削除
       setFormats(formats.filter((f) => f.id !== formatId))
       if (onDelete) onDelete(formatId)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'エラーが発生しました')
+    }
+  }
+
+  const handleCopy = async (format: AccountFormat) => {
+    const newName = prompt(`コピー先のフォーマット名を入力してください`, `${format.name}のコピー`)
+    if (!newName) return
+
+    try {
+      // フォーマットを取得してコピー
+      const response = await fetch(`/api/account-formats/${format.id}`)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'フォーマットの取得に失敗しました')
+      }
+
+      // 新しいフォーマットとして作成
+      const createResponse = await fetch('/api/account-formats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newName,
+          description: data.format.description ? `${data.format.description}（コピー）` : null,
+          industry_id: data.format.industry_id,
+          is_shared: false, // コピーは専用フォーマットとして作成
+          items: data.format.items || [],
+        }),
+      })
+
+      if (!createResponse.ok) {
+        const errorData = await createResponse.json()
+        throw new Error(errorData.error || 'フォーマットのコピーに失敗しました')
+      }
+
+      alert('フォーマットをコピーしました')
+      fetchFormats() // リストを再読み込み
     } catch (err) {
       alert(err instanceof Error ? err.message : 'エラーが発生しました')
     }
@@ -198,6 +236,14 @@ export function AccountFormatList({
                           <Edit className="h-4 w-4" />
                         </Button>
                       )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopy(format)}
+                        title="フォーマットをコピー"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"

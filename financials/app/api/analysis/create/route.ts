@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
     const {
       companyName,
       industryId,
+      formatId,
       fiscalYearStart,
       fiscalYearEnd,
     } = body
@@ -45,11 +46,21 @@ export async function POST(request: NextRequest) {
 
     if (existingCompany) {
       companyId = existingCompany.id
+
+      // 既存企業の業種が未設定で、新しい業種が提供された場合は更新
+      if (industryId) {
+        await supabase
+          .from('companies')
+          .update({ industry_id: industryId })
+          .eq('id', companyId)
+          .is('industry_id', null)
+      }
     } else {
       const { data: newCompany, error: companyError } = await supabase
         .from('companies')
         .insert({
           name: companyName,
+          industry_id: industryId || null,
         })
         .select()
         .single()
@@ -76,6 +87,7 @@ export async function POST(request: NextRequest) {
         fiscal_year_start: fiscalYearStart,
         fiscal_year_end: fiscalYearEnd,
         periods_count: periodsCount,
+        format_id: formatId || null,
         status: 'draft',
         created_by: null, // 認証無効化中はnull
       })
