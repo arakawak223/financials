@@ -1,0 +1,80 @@
+{
+  "name": "サービス業標準テンプレート",
+  "description": "サービス業向けの標準的な科目体系テンプレート",
+  "industry_name": "サービス業",
+  "is_shared": true,
+  "items": [
+    {
+      "category": "売上高",
+      "account_name": "売上高",
+      "display_order": 1,
+      "parent_id": null,
+      "level": 0,
+      "calculation_formula": null,
+      "is_total": true
+    },
+    {
+      "category": "売上高",
+      "account_name": "サービス売上高",
+      "display_order": 2,
+      "parent_id": null,
+      "level": 1,
+      "calculation_formula": null,
+      "is_total": false
+    },
+    {
+      "category": "売上高",
+      "account_name": "受託業務売上高",
+      "display_order": 3,
+      "parent_id": null,
+      "level": 1,
+      "calculation_formula": null,
+      "is_total": false
+    },
+    {
+      "category": "売上原価",
+      "account_name": "売上原価",
+      "display_order": 10,
+      "parent_id": null,
+      "level": 0,
+      "calculation_formula": null,
+      "is_total": true
+    },
+    {
+      "category": "売上原価",
+      "account_name": "外注費",
+      "display_order": 11,
+      "parent_id": null,
+      "level": 1,
+      "calculation_formula": null,
+      "is_total": false
+    },
+    {
+      "category": "売上原価",
+      "account_name": "人件費",
+      "display_order": 12,
+      "parent_id": null,
+      "level": 1,
+      "calculation_formula": null,
+      "is_total": false
+    },
+    {
+      "category": "売上原価",
+      "account_name": "その他原価",
+      "display_order": 13,
+      "parent_id": null,
+      "level": 1,
+      "calculation_formula": null,
+      "is_total": false
+    },
+    {
+      "category": "売上総利益",
+      "account_name": "売上総利益",
+      "display_order": 20,
+      "parent_id": null,
+      "level": 0,
+      "calculation_formula": null,
+      "is_total": true
+    }
+  ]
+}

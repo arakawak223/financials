@@ -1,0 +1,107 @@
+{
+  "name": "製造業標準テンプレート",
+  "description": "製造業向けの標準的な科目体系テンプレート",
+  "industry_name": "製造業",
+  "is_shared": true,
+  "items": [
+    {
+      "category": "売上高",
+      "account_name": "売上高",
+      "display_order": 1,
+      "parent_id": null,
+      "level": 0,
+      "calculation_formula": null,
+      "is_total": true
+    },
+    {
+      "category": "売上高",
+      "account_name": "製品売上高",
+      "display_order": 2,
+      "parent_id": null,
+      "level": 1,
+      "calculation_formula": null,
+      "is_total": false
+    },
+    {
+      "category": "売上高",
+      "account_name": "商品売上高",
+      "display_order": 3,
+      "parent_id": null,
+      "level": 1,
+      "calculation_formula": null,
+      "is_total": false
+    },
+    {
+      "category": "売上高",
+      "account_name": "その他売上高",
+      "display_order": 4,
+      "parent_id": null,
+      "level": 1,
+      "calculation_formula": null,
+      "is_total": false
+    },
+    {
+      "category": "売上原価",
+      "account_name": "売上原価",
+      "display_order": 10,
+      "parent_id": null,
+      "level": 0,
+      "calculation_formula": null,
+      "is_total": true
+    },
+    {
+      "category": "売上原価",
+      "account_name": "製品売上原価",
+      "display_order": 11,
+      "parent_id": null,
+      "level": 1,
+      "calculation_formula": null,
+      "is_total": false
+    },
+    {
+      "category": "売上原価",
+      "account_name": "材料費",
+      "display_order": 12,
+      "parent_id": null,
+      "level": 2,
+      "calculation_formula": null,
+      "is_total": false
+    },
+    {
+      "category": "売上原価",
+      "account_name": "労務費",
+      "display_order": 13,
+      "parent_id": null,
+      "level": 2,
+      "calculation_formula": null,
+      "is_total": false
+    },
+    {
+      "category": "売上原価",
+      "account_name": "製造経費",
+      "display_order": 14,
+      "parent_id": null,
+      "level": 2,
+      "calculation_formula": null,
+      "is_total": false
+    },
+    {
+      "category": "売上原価",
+      "account_name": "商品売上原価",
+      "display_order": 15,
+      "parent_id": null,
+      "level": 1,
+      "calculation_formula": null,
+      "is_total": false
+    },
+    {
+      "category": "売上総利益",
+      "account_name": "売上総利益",
+      "display_order": 20,
+      "parent_id": null,
+      "level": 0,
+      "calculation_formula": null,
+      "is_total": true
+    }
+  ]
+}

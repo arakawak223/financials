@@ -288,6 +288,7 @@ export default function AnalysisDetailPage() {
         <FinancialDataTable
           periods={analysis.periods}
           unit={amountUnit}
+          formatId={analysis.formatId}
           onUpdate={async (updatedPeriods) => {
             // データ更新API呼び出し
             try {

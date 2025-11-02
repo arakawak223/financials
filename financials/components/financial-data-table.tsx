@@ -1,21 +1,73 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Save, Edit, X } from 'lucide-react'
 import type { PeriodFinancialData, AmountUnit } from '@/lib/types/financial'
 import { formatAmountWithUnit, getUnitLabel } from '@/lib/utils/financial-calculations'
 
+interface AccountFormatItem {
+  id: string
+  category: string
+  account_name: string
+  display_order: number
+  level: number
+  is_total: boolean
+}
+
+interface AccountFormat {
+  id: string
+  name: string
+  items: AccountFormatItem[]
+}
+
 interface FinancialDataTableProps {
   periods: PeriodFinancialData[]
   unit: AmountUnit
+  formatId?: string | null
   onUpdate?: (periods: PeriodFinancialData[]) => void
 }
 
-export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTableProps) {
+export function FinancialDataTable({ periods, unit, formatId, onUpdate }: FinancialDataTableProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedPeriods, setEditedPeriods] = useState(periods)
+  const [format, setFormat] = useState<AccountFormat | null>(null)
+  const [loadingFormat, setLoadingFormat] = useState(false)
+  // フォーマット項目の値を保持: { [periodIndex]: { [formatItemId]: value } }
+  const [formatItemValues, setFormatItemValues] = useState<Record<number, Record<string, number | undefined>>>({})
+
+  // periodsが変更されたら編集内容をリセット
+  useEffect(() => {
+    setEditedPeriods(periods)
+  }, [periods])
+
+  // フォーマットを取得
+  useEffect(() => {
+    if (!formatId) {
+      setFormat(null)
+      return
+    }
+
+    const fetchFormat = async () => {
+      try {
+        setLoadingFormat(true)
+        const response = await fetch(`/api/account-formats/${formatId}`)
+        if (response.ok) {
+          const data = await response.json()
+          setFormat(data.format)
+        } else {
+          console.error('フォーマットの取得に失敗しました')
+        }
+      } catch (err) {
+        console.error('フォーマット取得エラー:', err)
+      } finally {
+        setLoadingFormat(false)
+      }
+    }
+
+    fetchFormat()
+  }, [formatId])
 
   const handleSave = () => {
     if (onUpdate) {
@@ -26,6 +78,7 @@ export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTab
 
   const handleCancel = () => {
     setEditedPeriods(periods)
+    setFormatItemValues({})
     setIsEditing(false)
   }
 
@@ -52,6 +105,27 @@ export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTab
     const sectionData = newPeriods[periodIndex][section] as Record<string, number | undefined>
     sectionData[field] = finalValue
     setEditedPeriods(newPeriods)
+  }
+
+  const updateFormatItemValue = (
+    periodIndex: number,
+    formatItemId: string,
+    value: string
+  ) => {
+    // 空文字の場合はundefined、それ以外は数値に変換
+    const cleanedValue = value.replace(/,/g, '').trim()
+    const numValue = cleanedValue === '' ? undefined : parseFloat(cleanedValue)
+
+    // NaNの場合は0として扱う
+    const finalValue = numValue !== undefined && !isNaN(numValue) ? numValue : (cleanedValue === '' ? undefined : 0)
+
+    setFormatItemValues((prev) => ({
+      ...prev,
+      [periodIndex]: {
+        ...(prev[periodIndex] || {}),
+        [formatItemId]: finalValue,
+      },
+    }))
   }
 
   const formatValue = (value: number | undefined) => formatAmountWithUnit(value, unit, 1)
@@ -321,6 +395,212 @@ export function FinancialDataTable({ periods, unit, onUpdate }: FinancialDataTab
           </table>
         </div>
       </Card>
+
+      {/* 科目フォーマット詳細 */}
+      {format && format.items && format.items.length > 0 && (
+        <Card className="p-6">
+          <h3 className="text-xl font-semibold mb-4">
+            科目詳細入力 - {format.name}
+          </h3>
+          {loadingFormat ? (
+            <div className="text-center py-4 text-gray-500">読み込み中...</div>
+          ) : (
+            <div className="space-y-6">
+              {/* 売上高 */}
+              {format.items.some((item) => item.category === '売上高') && (
+                <div>
+                  <h4 className="font-semibold mb-2 text-lg">売上高</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2 font-semibold">科目名</th>
+                          {editedPeriods.map((period) => (
+                            <th key={period.fiscalYear} className="text-right p-2 font-semibold">
+                              {period.fiscalYear}年度
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {format.items
+                          .filter((item) => item.category === '売上高')
+                          .sort((a, b) => a.display_order - b.display_order)
+                          .map((item) => (
+                            <tr
+                              key={item.id}
+                              className={`border-b hover:bg-gray-50 ${
+                                item.is_total ? 'bg-blue-50 font-semibold' : ''
+                              }`}
+                            >
+                              <td
+                                className="p-2"
+                                style={{ paddingLeft: `${item.level * 20 + 8}px` }}
+                              >
+                                {item.account_name}
+                                {item.is_total && ' (合計)'}
+                              </td>
+                              {editedPeriods.map((period, periodIndex) => {
+                                const currentValue = formatItemValues[periodIndex]?.[item.id]
+                                return (
+                                  <td key={period.fiscalYear} className="p-2 text-right">
+                                    {isEditing && !item.is_total ? (
+                                      <input
+                                        type="text"
+                                        className="w-full text-right border rounded px-2 py-1"
+                                        placeholder="0"
+                                        value={currentValue?.toLocaleString() || ''}
+                                        onChange={(e) =>
+                                          updateFormatItemValue(periodIndex, item.id, e.target.value)
+                                        }
+                                      />
+                                    ) : (
+                                      <span className={item.is_total ? 'font-semibold' : ''}>
+                                        {formatValue(currentValue)}
+                                      </span>
+                                    )}
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* 売上原価 */}
+              {format.items.some((item) => item.category === '売上原価') && (
+                <div>
+                  <h4 className="font-semibold mb-2 text-lg">売上原価</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2 font-semibold">科目名</th>
+                          {editedPeriods.map((period) => (
+                            <th key={period.fiscalYear} className="text-right p-2 font-semibold">
+                              {period.fiscalYear}年度
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {format.items
+                          .filter((item) => item.category === '売上原価')
+                          .sort((a, b) => a.display_order - b.display_order)
+                          .map((item) => (
+                            <tr
+                              key={item.id}
+                              className={`border-b hover:bg-gray-50 ${
+                                item.is_total ? 'bg-blue-50 font-semibold' : ''
+                              }`}
+                            >
+                              <td
+                                className="p-2"
+                                style={{ paddingLeft: `${item.level * 20 + 8}px` }}
+                              >
+                                {item.account_name}
+                                {item.is_total && ' (合計)'}
+                              </td>
+                              {editedPeriods.map((period, periodIndex) => {
+                                const currentValue = formatItemValues[periodIndex]?.[item.id]
+                                return (
+                                  <td key={period.fiscalYear} className="p-2 text-right">
+                                    {isEditing && !item.is_total ? (
+                                      <input
+                                        type="text"
+                                        className="w-full text-right border rounded px-2 py-1"
+                                        placeholder="0"
+                                        value={currentValue?.toLocaleString() || ''}
+                                        onChange={(e) =>
+                                          updateFormatItemValue(periodIndex, item.id, e.target.value)
+                                        }
+                                      />
+                                    ) : (
+                                      <span className={item.is_total ? 'font-semibold' : ''}>
+                                        {formatValue(currentValue)}
+                                      </span>
+                                    )}
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* 売上総利益 */}
+              {format.items.some((item) => item.category === '売上総利益') && (
+                <div>
+                  <h4 className="font-semibold mb-2 text-lg">売上総利益</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2 font-semibold">科目名</th>
+                          {editedPeriods.map((period) => (
+                            <th key={period.fiscalYear} className="text-right p-2 font-semibold">
+                              {period.fiscalYear}年度
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {format.items
+                          .filter((item) => item.category === '売上総利益')
+                          .sort((a, b) => a.display_order - b.display_order)
+                          .map((item) => (
+                            <tr
+                              key={item.id}
+                              className={`border-b hover:bg-gray-50 ${
+                                item.is_total ? 'bg-blue-50 font-semibold' : ''
+                              }`}
+                            >
+                              <td
+                                className="p-2"
+                                style={{ paddingLeft: `${item.level * 20 + 8}px` }}
+                              >
+                                {item.account_name}
+                                {item.is_total && ' (合計)'}
+                              </td>
+                              {editedPeriods.map((period, periodIndex) => {
+                                const currentValue = formatItemValues[periodIndex]?.[item.id]
+                                return (
+                                  <td key={period.fiscalYear} className="p-2 text-right">
+                                    {isEditing && !item.is_total ? (
+                                      <input
+                                        type="text"
+                                        className="w-full text-right border rounded px-2 py-1"
+                                        placeholder="0"
+                                        value={currentValue?.toLocaleString() || ''}
+                                        onChange={(e) =>
+                                          updateFormatItemValue(periodIndex, item.id, e.target.value)
+                                        }
+                                      />
+                                    ) : (
+                                      <span className={item.is_total ? 'font-semibold' : ''}>
+                                        {formatValue(currentValue)}
+                                      </span>
+                                    )}
+                                  </td>
+                                )
+                              })}
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* 手入力データ */}
       <Card className="p-6">
