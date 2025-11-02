@@ -217,12 +217,12 @@ export function AccountFormatEditor({
 
           <div className="grid gap-2">
             <Label htmlFor="industry">業種</Label>
-            <Select value={industryId} onValueChange={setIndustryId}>
+            <Select value={industryId || '__none__'} onValueChange={(value) => setIndustryId(value === '__none__' ? '' : value)}>
               <SelectTrigger>
                 <SelectValue placeholder="業種を選択" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">未設定</SelectItem>
+                <SelectItem value="__none__">未設定</SelectItem>
                 {industries.map((industry) => (
                   <SelectItem key={industry.id} value={industry.id}>
                     {industry.name}

@@ -115,6 +115,7 @@ export interface Database {
           periods_count: number
           status: string
           notes: string | null
+          format_id: string | null
           created_by: string | null
           created_at: string
           updated_at: string
@@ -128,6 +129,7 @@ export interface Database {
           periods_count?: number
           status?: string
           notes?: string | null
+          format_id?: string | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -141,6 +143,7 @@ export interface Database {
           periods_count?: number
           status?: string
           notes?: string | null
+          format_id?: string | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -323,6 +326,7 @@ export interface Database {
           amount: number | null
           note: string | null
           is_modified: boolean
+          format_item_id: string | null
           created_at: string
           updated_at: string
         }
@@ -334,6 +338,7 @@ export interface Database {
           amount?: number | null
           note?: string | null
           is_modified?: boolean
+          format_item_id?: string | null
           created_at?: string
           updated_at?: string
         }

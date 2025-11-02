@@ -4,11 +4,11 @@ import { NextRequest, NextResponse } from 'next/server'
 // POST /api/account-formats/[id]/assign - 企業にフォーマットを割り当て
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
-    const { id: formatId } = params
+    const { id: formatId } = await params
     const body = await request.json()
 
     const { company_id, is_active = true } = body

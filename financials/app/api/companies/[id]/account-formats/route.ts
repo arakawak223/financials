@@ -4,11 +4,11 @@ import { NextRequest, NextResponse } from 'next/server'
 // GET /api/companies/[id]/account-formats - 企業に割り当てられたフォーマット一覧取得
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
-    const { id: companyId } = params
+    const { id: companyId } = await params
     const { searchParams } = new URL(request.url)
     const activeOnly = searchParams.get('active_only') === 'true'
 

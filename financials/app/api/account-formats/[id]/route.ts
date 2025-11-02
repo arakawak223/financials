@@ -4,11 +4,11 @@ import { NextRequest, NextResponse } from 'next/server'
 // GET /api/account-formats/[id] - フォーマット詳細取得
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
-    const { id } = params
+    const { id } = await params
 
     const { data: format, error } = await supabase
       .from('account_formats')
@@ -48,11 +48,11 @@ export async function GET(
 // PUT /api/account-formats/[id] - フォーマット更新
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
 
     const { name, description, industry_id, is_shared, items } = body
@@ -136,11 +136,11 @@ export async function PUT(
 // DELETE /api/account-formats/[id] - フォーマット削除
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
-    const { id } = params
+    const { id } = await params
 
     // フォーマットを削除（CASCADE設定により、関連アイテムも自動削除される）
     const { error } = await supabase
