@@ -1,7 +1,7 @@
--- コンサルティング業を業種に追加
+-- ���ƣ�m�m.k��
 INSERT INTO industries (name, created_at, updated_at)
-VALUES ('コンサルティング業', NOW(), NOW())
+VALUES ('���ƣ�m', NOW(), NOW())
 ON CONFLICT (name) DO NOTHING;
 
--- 確認用：全業種を表示
+-- ��(hm.�h:
 SELECT * FROM industries ORDER BY name;

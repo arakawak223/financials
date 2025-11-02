@@ -459,6 +459,77 @@ export interface Database {
         }
         Update: Partial<Database['public']['Tables']['access_logs']['Insert']>
       }
+      account_formats: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          industry_id: string | null
+          is_shared: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          industry_id?: string | null
+          is_shared?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['account_formats']['Insert']>
+      }
+      account_format_items: {
+        Row: {
+          id: string
+          format_id: string
+          category: string
+          account_name: string
+          display_order: number
+          parent_id: string | null
+          level: number
+          calculation_formula: string | null
+          is_total: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          format_id: string
+          category: string
+          account_name: string
+          display_order?: number
+          parent_id?: string | null
+          level?: number
+          calculation_formula?: string | null
+          is_total?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['account_format_items']['Insert']>
+      }
+      company_account_formats: {
+        Row: {
+          id: string
+          company_id: string
+          format_id: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          company_id: string
+          format_id: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['company_account_formats']['Insert']>
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
