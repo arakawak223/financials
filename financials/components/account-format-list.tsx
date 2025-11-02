@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Share2, Lock, Copy } from 'lucide-react'
+import { Plus, Edit, Trash2, Share2, Lock, Copy, Download, Upload } from 'lucide-react'
 
 interface AccountFormat {
   id: string
@@ -139,6 +139,87 @@ export function AccountFormatList({
     }
   }
 
+  const handleExport = async (format: AccountFormat) => {
+    try {
+      // フォーマット詳細を取得
+      const response = await fetch(`/api/account-formats/${format.id}`)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'フォーマットの取得に失敗しました')
+      }
+
+      // エクスポート用のデータを作成（ID以外をエクスポート）
+      const exportData = {
+        name: data.format.name,
+        description: data.format.description,
+        industry_id: data.format.industry_id,
+        is_shared: data.format.is_shared,
+        items: data.format.items.map((item: any) => ({
+          category: item.category,
+          account_name: item.account_name,
+          display_order: item.display_order,
+          parent_id: item.parent_id,
+          level: item.level,
+          calculation_formula: item.calculation_formula,
+          is_total: item.is_total,
+        })),
+      }
+
+      // JSONファイルとしてダウンロード
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `format_${format.name}_${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'エラーが発生しました')
+    }
+  }
+
+  const handleImport = async () => {
+    // ファイル選択ダイアログを表示
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = async (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (!file) return
+
+      try {
+        const text = await file.text()
+        const importData = JSON.parse(text)
+
+        // バリデーション
+        if (!importData.name || !Array.isArray(importData.items)) {
+          throw new Error('無効なフォーマットファイルです')
+        }
+
+        // フォーマットを作成
+        const createResponse = await fetch('/api/account-formats', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(importData),
+        })
+
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json()
+          throw new Error(errorData.error || 'フォーマットのインポートに失敗しました')
+        }
+
+        alert('フォーマットをインポートしました')
+        fetchFormats() // リストを再読み込み
+      } catch (err) {
+        alert(err instanceof Error ? err.message : 'エラーが発生しました')
+      }
+    }
+    input.click()
+  }
+
   if (loading) {
     return (
       <Card>
@@ -171,12 +252,18 @@ export function AccountFormatList({
             売上高・売上原価・売上総利益の科目体系を管理します
           </CardDescription>
         </div>
-        {onCreate && (
-          <Button onClick={onCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            新規フォーマット作成
+        <div className="flex gap-2">
+          <Button onClick={handleImport} variant="outline">
+            <Upload className="mr-2 h-4 w-4" />
+            インポート
           </Button>
-        )}
+          {onCreate && (
+            <Button onClick={onCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              新規作成
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {formats.length === 0 ? (
@@ -232,6 +319,7 @@ export function AccountFormatList({
                           variant="outline"
                           size="sm"
                           onClick={() => onEdit(format)}
+                          title="編集"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -240,14 +328,23 @@ export function AccountFormatList({
                         variant="outline"
                         size="sm"
                         onClick={() => handleCopy(format)}
-                        title="フォーマットをコピー"
+                        title="コピー"
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => handleExport(format)}
+                        title="エクスポート"
+                      >
+                        <Download className="h-4 w-4 text-blue-500" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleDelete(format.id)}
+                        title="削除"
                       >
                         <Trash2 className="h-4 w-4 text-red-500" />
                       </Button>

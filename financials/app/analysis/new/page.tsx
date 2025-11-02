@@ -22,6 +22,10 @@ interface AccountFormat {
   name: string
   description: string | null
   is_shared: boolean
+  industry?: {
+    id: string
+    name: string
+  } | null
 }
 
 export default function NewAnalysisPage() {
@@ -77,6 +81,21 @@ export default function NewAnalysisPage() {
     }
     fetchFormats()
   }, [])
+
+  // 業種選択時に該当する業種のデフォルトフォーマットを自動適用
+  useEffect(() => {
+    if (!industryId || formats.length === 0) return
+
+    // 業種に一致する共有フォーマットを探す
+    const matchingFormat = formats.find(
+      (f) => f.is_shared && f.industry?.id === industryId
+    )
+
+    if (matchingFormat && !formatId) {
+      // まだフォーマットが選択されていない場合のみ自動選択
+      setFormatId(matchingFormat.id)
+    }
+  }, [industryId, formats])
 
   const handleNext = () => {
     const steps: Step[] = ['company', 'period', 'upload', 'review']
