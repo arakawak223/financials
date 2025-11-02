@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { id: companyId } = params
     const { searchParams } = new URL(request.url)
     const activeOnly = searchParams.get('active_only') === 'true'

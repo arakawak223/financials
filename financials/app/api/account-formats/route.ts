@@ -8,7 +8,7 @@ type AccountFormatInsert = Database['public']['Tables']['account_formats']['Inse
 // GET /api/account-formats - フォーマット一覧取得
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { searchParams } = new URL(request.url)
 
     const industryId = searchParams.get('industry_id')
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
 // POST /api/account-formats - フォーマット作成
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const body = await request.json()
 
     const {

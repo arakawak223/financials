@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { id } = params
 
     const { data: format, error } = await supabase
@@ -51,7 +51,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { id } = params
     const body = await request.json()
 
@@ -139,7 +139,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
     const { id } = params
 
     // フォーマットを削除（CASCADE設定により、関連アイテムも自動削除される）
