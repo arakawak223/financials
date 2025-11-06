@@ -7,6 +7,9 @@ import path from 'path'
  */
 function getVisionClient() {
   console.log('🔧 Vision API クライアント初期化中...')
+  console.log('🔍 環境変数チェック:')
+  console.log('  - GOOGLE_APPLICATION_CREDENTIALS_JSON:', process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON ? '設定あり（長さ: ' + process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON.length + '）' : '未設定')
+  console.log('  - GOOGLE_CLOUD_CREDENTIALS:', process.env.GOOGLE_CLOUD_CREDENTIALS ? '設定あり（長さ: ' + process.env.GOOGLE_CLOUD_CREDENTIALS.length + '）' : '未設定')
 
   // 環境変数から認証情報を取得（本番環境）
   const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || process.env.GOOGLE_CLOUD_CREDENTIALS
