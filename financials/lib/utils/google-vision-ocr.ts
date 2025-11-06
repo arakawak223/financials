@@ -16,20 +16,42 @@ function getVisionClient() {
   if (credentialsBase64) {
     try {
       console.log('🔐 Base64エンコードされた認証情報をデコード中...')
+      console.log('📏 Base64文字列の長さ:', credentialsBase64.length, '文字')
+
       const credentialsJson = Buffer.from(credentialsBase64, 'base64').toString('utf-8')
       console.log('📝 デコード後の長さ:', credentialsJson.length, '文字')
+      console.log('📝 デコード後の最初の200文字:', credentialsJson.substring(0, 200))
 
       const credentials = JSON.parse(credentialsJson)
 
-      console.log('✅ Base64デコード＆JSONパース成功')
+      console.log('✅ JSONパース成功')
+      console.log('🔑 認証情報キー:', Object.keys(credentials).join(', '))
       console.log('📧 Service Account:', credentials.client_email)
       console.log('🆔 Project ID:', credentials.project_id)
 
-      return new vision.ImageAnnotatorClient({
+      // private_keyの詳細確認
+      if (credentials.private_key) {
+        console.log('🔑 private_key の長さ:', credentials.private_key.length, '文字')
+        console.log('🔑 private_key の開始:', credentials.private_key.substring(0, 50))
+        console.log('🔑 private_key の終了:', credentials.private_key.substring(credentials.private_key.length - 50))
+        console.log('🔑 private_key に含まれる \\n の数:', (credentials.private_key.match(/\n/g) || []).length)
+        console.log('🔑 private_key に含まれる \\\\n (文字列) の数:', (credentials.private_key.match(/\\n/g) || []).length)
+      } else {
+        console.error('❌ private_key が見つかりません！')
+      }
+
+      console.log('🚀 Vision API クライアント作成中...')
+      const client = new vision.ImageAnnotatorClient({
         credentials,
       })
+      console.log('✅ Vision API クライアント作成成功')
+
+      return client
     } catch (error) {
-      console.error('❌ Base64デコードまたはJSONパースに失敗:', error)
+      console.error('❌ Base64デコードまたはJSONパースまたはクライアント作成に失敗')
+      console.error('📝 エラーの型:', error instanceof Error ? error.constructor.name : typeof error)
+      console.error('📝 エラーメッセージ:', error instanceof Error ? error.message : String(error))
+      console.error('📝 エラースタック:', error instanceof Error ? error.stack : 'N/A')
       throw new Error(`Base64デコードエラー: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
