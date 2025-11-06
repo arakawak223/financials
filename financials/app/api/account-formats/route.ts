@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       .from('account_formats')
       .select(`
         *,
-        industry:industries(id, name),
+        industry:industries!left(id, name),
         items:account_format_items(*)
       `)
       .order('created_at', { ascending: false })
@@ -39,13 +39,14 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching account formats:', error)
+      console.error('Error details:', JSON.stringify(error, null, 2))
       return NextResponse.json(
-        { error: 'フォーマットの取得に失敗しました' },
+        { error: 'フォーマットの取得に失敗しました', details: error.message },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ formats: data })
+    return NextResponse.json({ formats: data || [] })
   } catch (error) {
     console.error('Unexpected error:', error)
     return NextResponse.json(

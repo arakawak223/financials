@@ -67,8 +67,9 @@ export async function POST(request: NextRequest) {
 
       if (companyError) {
         console.error('Company creation error:', companyError)
+        console.error('Company creation error details:', JSON.stringify(companyError, null, 2))
         return NextResponse.json(
-          { error: 'Failed to create company' },
+          { error: 'Failed to create company', details: companyError.message },
           { status: 500 }
         )
       }
@@ -96,8 +97,9 @@ export async function POST(request: NextRequest) {
 
     if (analysisError) {
       console.error('Analysis creation error:', analysisError)
+      console.error('Analysis creation error details:', JSON.stringify(analysisError, null, 2))
       return NextResponse.json(
-        { error: 'Failed to create analysis' },
+        { error: 'Failed to create analysis', details: analysisError.message },
         { status: 500 }
       )
     }
@@ -129,8 +131,10 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('API error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('API error details:', errorMessage)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: errorMessage },
       { status: 500 }
     )
   }
