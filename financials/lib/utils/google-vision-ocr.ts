@@ -16,25 +16,54 @@ function getVisionClient() {
 
   if (credentialsJson) {
     try {
-      console.log('🔍 環境変数の内容（最初の100文字）:', typeof credentialsJson, credentialsJson.substring(0, 100))
+      console.log('🔍 環境変数の型:', typeof credentialsJson)
+      console.log('🔍 環境変数の長さ:', credentialsJson.length, '文字')
+      console.log('🔍 最初の100文字:', credentialsJson.substring(0, 100))
+      console.log('🔍 最後の100文字:', credentialsJson.substring(Math.max(0, credentialsJson.length - 100)))
 
       // JSON文字列をパース
-      const credentials = typeof credentialsJson === 'string'
-        ? JSON.parse(credentialsJson)
-        : credentialsJson
+      let credentials
+      if (typeof credentialsJson === 'string') {
+        console.log('📝 JSON文字列をパース中...')
 
-      console.log('🔑 環境変数から認証情報を読み込みました')
+        // エスケープされたバックスラッシュを処理
+        const cleanedJson = credentialsJson.replace(/\\\\n/g, '\\n')
+        console.log('🔧 クリーンアップ後の最初の100文字:', cleanedJson.substring(0, 100))
+
+        credentials = JSON.parse(cleanedJson)
+      } else {
+        console.log('📝 既にオブジェクト形式です')
+        credentials = credentialsJson
+      }
+
+      console.log('✅ JSON パース成功')
+      console.log('🔑 認証情報キー:', Object.keys(credentials).join(', '))
       console.log('📧 Service Account:', credentials.client_email)
+      console.log('🆔 Project ID:', credentials.project_id)
+
+      // private_keyの存在確認
+      if (!credentials.private_key) {
+        throw new Error('private_key が見つかりません')
+      }
+      console.log('🔑 private_key の長さ:', credentials.private_key.length, '文字')
+      console.log('🔑 private_key の開始:', credentials.private_key.substring(0, 30))
 
       return new vision.ImageAnnotatorClient({
         credentials,
       })
     } catch (error) {
-      console.error('❌ 環境変数の認証情報のパースに失敗:', error)
+      console.error('❌ 環境変数の認証情報のパースに失敗')
+      console.error('📝 エラーの型:', error instanceof Error ? error.constructor.name : typeof error)
+      console.error('📝 エラーメッセージ:', error instanceof Error ? error.message : String(error))
       console.error('📝 環境変数の型:', typeof credentialsJson)
       console.error('📝 環境変数の長さ:', credentialsJson?.length)
-      console.error('📝 最初の200文字:', credentialsJson?.substring(0, 200))
-      throw new Error('Google Cloud認証情報が正しくありません')
+
+      if (error instanceof SyntaxError) {
+        console.error('⚠️  JSON構文エラー - 環境変数の値を確認してください')
+        console.error('📝 問題のある部分（推定）:', credentialsJson?.substring(0, 300))
+      }
+
+      throw new Error(`Google Cloud認証情報のパースエラー: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
