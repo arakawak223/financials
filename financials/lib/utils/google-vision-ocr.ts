@@ -13,6 +13,8 @@ function getVisionClient() {
 
   if (credentialsJson) {
     try {
+      console.log('🔍 環境変数の内容（最初の100文字）:', typeof credentialsJson, credentialsJson.substring(0, 100))
+
       // JSON文字列をパース
       const credentials = typeof credentialsJson === 'string'
         ? JSON.parse(credentialsJson)
@@ -26,6 +28,9 @@ function getVisionClient() {
       })
     } catch (error) {
       console.error('❌ 環境変数の認証情報のパースに失敗:', error)
+      console.error('📝 環境変数の型:', typeof credentialsJson)
+      console.error('📝 環境変数の長さ:', credentialsJson?.length)
+      console.error('📝 最初の200文字:', credentialsJson?.substring(0, 200))
       throw new Error('Google Cloud認証情報が正しくありません')
     }
   }
