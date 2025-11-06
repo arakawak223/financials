@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Download, FileText, Loader2, TrendingUp } from 'lucide-react'
+import { ArrowLeft, Download, FileText, Loader2, TrendingUp, RefreshCw } from 'lucide-react'
 import { FinancialDataTable } from '@/components/financial-data-table'
 import { FinancialCharts, generateChartsFromMetrics } from '@/components/financial-charts'
 import { FinancialMetricsTable } from '@/components/financial-metrics-table'
@@ -94,6 +94,35 @@ export default function AnalysisDetailPage() {
     }
   }
 
+  const handleRecalculate = async () => {
+    if (!confirm('財務指標を再計算しますか？\n（既存の指標データは上書きされます）')) {
+      return
+    }
+
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/analysis/${analysisId}/recalculate`, {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || '再計算に失敗しました')
+      }
+
+      const result = await response.json()
+      alert(`財務指標を再計算しました\n\n処理期間: ${result.periodsProcessed}期\n成功: ${result.successCount}期\n失敗: ${result.errorCount}期`)
+
+      // データを再読み込み
+      await loadAnalysis()
+    } catch (err) {
+      console.error('Recalculate error:', err)
+      alert(err instanceof Error ? err.message : '再計算に失敗しました')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="container mx-auto py-8 max-w-7xl">
@@ -177,6 +206,14 @@ export default function AnalysisDetailPage() {
             >
               <Download className="h-4 w-4 mr-2" />
               PowerPoint出力
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleRecalculate}
+              disabled={loading}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              指標を再計算
             </Button>
           </div>
         </div>
