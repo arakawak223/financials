@@ -8,62 +8,63 @@ import path from 'path'
 function getVisionClient() {
   console.log('🔧 Vision API クライアント初期化中...')
   console.log('🔍 環境変数チェック:')
-  console.log('  - GOOGLE_APPLICATION_CREDENTIALS_JSON:', process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON ? '設定あり（長さ: ' + process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON.length + '）' : '未設定')
-  console.log('  - GOOGLE_CLOUD_CREDENTIALS:', process.env.GOOGLE_CLOUD_CREDENTIALS ? '設定あり（長さ: ' + process.env.GOOGLE_CLOUD_CREDENTIALS.length + '）' : '未設定')
+  console.log('  - GOOGLE_CLOUD_CREDENTIALS_BASE64:', process.env.GOOGLE_CLOUD_CREDENTIALS_BASE64 ? '設定あり（Base64, 長さ: ' + process.env.GOOGLE_CLOUD_CREDENTIALS_BASE64.length + '）' : '未設定')
+  console.log('  - GOOGLE_CLOUD_CREDENTIALS:', process.env.GOOGLE_CLOUD_CREDENTIALS ? '設定あり（JSON, 長さ: ' + process.env.GOOGLE_CLOUD_CREDENTIALS.length + '）' : '未設定')
 
-  // 環境変数から認証情報を取得（本番環境）
-  const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || process.env.GOOGLE_CLOUD_CREDENTIALS
-
-  if (credentialsJson) {
+  // 方法1: Base64エンコードされた認証情報（推奨）
+  const credentialsBase64 = process.env.GOOGLE_CLOUD_CREDENTIALS_BASE64
+  if (credentialsBase64) {
     try {
-      console.log('🔍 環境変数の型:', typeof credentialsJson)
-      console.log('🔍 環境変数の長さ:', credentialsJson.length, '文字')
-      console.log('🔍 最初の100文字:', credentialsJson.substring(0, 100))
-      console.log('🔍 最後の100文字:', credentialsJson.substring(Math.max(0, credentialsJson.length - 100)))
+      console.log('🔐 Base64エンコードされた認証情報をデコード中...')
+      const credentialsJson = Buffer.from(credentialsBase64, 'base64').toString('utf-8')
+      console.log('📝 デコード後の長さ:', credentialsJson.length, '文字')
 
-      // JSON文字列をパース
-      let credentials
-      if (typeof credentialsJson === 'string') {
-        console.log('📝 JSON文字列をパース中...')
+      const credentials = JSON.parse(credentialsJson)
 
-        // エスケープされたバックスラッシュを処理
-        const cleanedJson = credentialsJson.replace(/\\\\n/g, '\\n')
-        console.log('🔧 クリーンアップ後の最初の100文字:', cleanedJson.substring(0, 100))
-
-        credentials = JSON.parse(cleanedJson)
-      } else {
-        console.log('📝 既にオブジェクト形式です')
-        credentials = credentialsJson
-      }
-
-      console.log('✅ JSON パース成功')
-      console.log('🔑 認証情報キー:', Object.keys(credentials).join(', '))
+      console.log('✅ Base64デコード＆JSONパース成功')
       console.log('📧 Service Account:', credentials.client_email)
       console.log('🆔 Project ID:', credentials.project_id)
-
-      // private_keyの存在確認
-      if (!credentials.private_key) {
-        throw new Error('private_key が見つかりません')
-      }
-      console.log('🔑 private_key の長さ:', credentials.private_key.length, '文字')
-      console.log('🔑 private_key の開始:', credentials.private_key.substring(0, 30))
 
       return new vision.ImageAnnotatorClient({
         credentials,
       })
     } catch (error) {
-      console.error('❌ 環境変数の認証情報のパースに失敗')
-      console.error('📝 エラーの型:', error instanceof Error ? error.constructor.name : typeof error)
-      console.error('📝 エラーメッセージ:', error instanceof Error ? error.message : String(error))
-      console.error('📝 環境変数の型:', typeof credentialsJson)
-      console.error('📝 環境変数の長さ:', credentialsJson?.length)
+      console.error('❌ Base64デコードまたはJSONパースに失敗:', error)
+      throw new Error(`Base64デコードエラー: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
 
-      if (error instanceof SyntaxError) {
-        console.error('⚠️  JSON構文エラー - 環境変数の値を確認してください')
-        console.error('📝 問題のある部分（推定）:', credentialsJson?.substring(0, 300))
+  // 方法2: JSON文字列（フォールバック）
+  const credentialsJson = process.env.GOOGLE_CLOUD_CREDENTIALS
+  if (credentialsJson) {
+    try {
+      console.log('🔍 JSON文字列形式の認証情報を処理中...')
+      console.log('📝 環境変数の長さ:', credentialsJson.length, '文字')
+
+      let credentials
+      if (typeof credentialsJson === 'string') {
+        credentials = JSON.parse(credentialsJson)
+      } else {
+        credentials = credentialsJson
       }
 
-      throw new Error(`Google Cloud認証情報のパースエラー: ${error instanceof Error ? error.message : String(error)}`)
+      console.log('✅ JSONパース成功')
+      console.log('📧 Service Account:', credentials.client_email)
+      console.log('🆔 Project ID:', credentials.project_id)
+
+      return new vision.ImageAnnotatorClient({
+        credentials,
+      })
+    } catch (error) {
+      console.error('❌ JSON認証情報のパースに失敗')
+      console.error('📝 エラー:', error instanceof Error ? error.message : String(error))
+
+      if (error instanceof SyntaxError) {
+        console.error('⚠️  JSON構文エラー')
+        console.error('💡 ヒント: GOOGLE_CLOUD_CREDENTIALS_BASE64 を使用することを推奨します')
+      }
+
+      throw new Error(`JSON認証情報パースエラー: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
