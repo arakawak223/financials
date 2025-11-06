@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -28,8 +28,9 @@ interface AccountFormat {
   } | null
 }
 
-export default function NewAnalysisPage() {
+function NewAnalysisPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [currentStep, setCurrentStep] = useState<Step>('industry')
   const [isProcessing, setIsProcessing] = useState(false)
   const [processingStatus, setProcessingStatus] = useState('')
@@ -65,6 +66,16 @@ export default function NewAnalysisPage() {
       label: `${year}年度 勘定科目内訳書`,
     })
   }
+
+  // URLパラメータからformatIdを取得
+  useEffect(() => {
+    const paramFormatId = searchParams.get('formatId')
+    if (paramFormatId) {
+      setFormatId(paramFormatId)
+      // テンプレートが指定されている場合は、テンプレート選択ステップにスキップ
+      setCurrentStep('template')
+    }
+  }, [searchParams])
 
   // 利用可能なテンプレート一覧を取得
   useEffect(() => {
@@ -609,5 +620,13 @@ export default function NewAnalysisPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function NewAnalysisPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto py-8 max-w-4xl text-center">読み込み中...</div>}>
+      <NewAnalysisPageContent />
+    </Suspense>
   )
 }

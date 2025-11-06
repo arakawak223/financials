@@ -18,7 +18,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, Share2, Lock, Copy, Download, Upload } from 'lucide-react'
+import { Plus, Edit, Trash2, Share2, Lock, Copy, Download, Upload, Play } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 interface AccountFormat {
   id: string
@@ -59,6 +60,7 @@ export function AccountFormatList({
   onDelete,
   onCreate,
 }: AccountFormatListProps) {
+  const router = useRouter()
   const [formats, setFormats] = useState<AccountFormat[]>([])
   const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
@@ -404,6 +406,14 @@ export function AccountFormatList({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => router.push(`/analysis/new?formatId=${format.id}`)}
+                        title="このテンプレートで分析を開始"
+                      >
+                        <Play className="h-4 w-4 mr-1" />
+                        分析で使用
+                      </Button>
                       {onEdit && (
                         <Button
                           variant="outline"

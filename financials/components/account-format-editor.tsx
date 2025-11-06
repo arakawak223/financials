@@ -28,7 +28,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Switch } from '@/components/ui/switch'
-import { Plus, Trash2, Save, ArrowLeft, ChevronRight } from 'lucide-react'
+import { Plus, Trash2, Save, ArrowLeft, ArrowRight } from 'lucide-react'
 
 interface AccountFormatItem {
   id?: string
@@ -121,7 +121,7 @@ export function AccountFormatEditor({
     setItems(items.filter((_, i) => i !== index))
   }
 
-  const handleSave = async () => {
+  const handleSave = async (startAnalysis = false) => {
     if (!name.trim()) {
       alert('テンプレート名を入力してください')
       return
@@ -162,8 +162,13 @@ export function AccountFormatEditor({
         throw new Error(data.error || '保存に失敗しました')
       }
 
-      alert('テンプレートを保存しました')
-      if (onSave) onSave(data.format.id)
+      if (startAnalysis) {
+        // 分析作成ページに遷移
+        window.location.href = `/analysis/new?formatId=${data.format.id}`
+      } else {
+        alert('テンプレートを保存しました')
+        if (onSave) onSave(data.format.id)
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'エラーが発生しました')
     } finally {
@@ -355,9 +360,13 @@ export function AccountFormatEditor({
               キャンセル
             </Button>
           )}
-          <Button onClick={handleSave} disabled={loading}>
+          <Button onClick={() => handleSave(false)} disabled={loading} variant="outline">
             <Save className="mr-2 h-4 w-4" />
             {loading ? '保存中...' : '保存'}
+          </Button>
+          <Button onClick={() => handleSave(true)} disabled={loading}>
+            <ArrowRight className="mr-2 h-4 w-4" />
+            {loading ? '保存中...' : '保存して分析を開始'}
           </Button>
         </div>
       </CardContent>
