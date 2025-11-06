@@ -6,10 +6,32 @@ import path from 'path'
  * Google Cloud Vision APIクライアントを初期化
  */
 function getVisionClient() {
-  // ファイルベースの認証を使用（推奨方法）
-  const credentialsPath = path.join(process.cwd(), 'google-credentials.json')
-
   console.log('🔧 Vision API クライアント初期化中...')
+
+  // 環境変数から認証情報を取得（本番環境）
+  const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || process.env.GOOGLE_CLOUD_CREDENTIALS
+
+  if (credentialsJson) {
+    try {
+      // JSON文字列をパース
+      const credentials = typeof credentialsJson === 'string'
+        ? JSON.parse(credentialsJson)
+        : credentialsJson
+
+      console.log('🔑 環境変数から認証情報を読み込みました')
+      console.log('📧 Service Account:', credentials.client_email)
+
+      return new vision.ImageAnnotatorClient({
+        credentials,
+      })
+    } catch (error) {
+      console.error('❌ 環境変数の認証情報のパースに失敗:', error)
+      throw new Error('Google Cloud認証情報が正しくありません')
+    }
+  }
+
+  // ファイルベースの認証を使用（ローカル開発環境）
+  const credentialsPath = path.join(process.cwd(), 'google-credentials.json')
   console.log('📁 認証情報ファイル:', credentialsPath)
 
   return new vision.ImageAnnotatorClient({
