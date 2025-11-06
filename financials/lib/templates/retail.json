@@ -1,6 +1,6 @@
 {
-  "name": "小売業標準テンプレート",
-  "description": "小売業向けの標準的な科目体系テンプレート",
+  "name": "小売業テンプレート",
+  "description": "小売業向けの売上高・売上原価の内訳科目テンプレート",
   "industry_name": "小売業",
   "is_shared": true,
   "items": [

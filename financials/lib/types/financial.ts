@@ -211,6 +211,7 @@ export interface FinancialAnalysis {
   fiscalYearEnd: number
   periodsCount: number
   status: AnalysisStatus
+  formatId?: string  // 勘定科目フォーマットID
 
   // 3期分のデータ
   periods: PeriodFinancialData[]

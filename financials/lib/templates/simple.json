@@ -1,0 +1,35 @@
+{
+  "name": "基本テンプレート",
+  "description": "内訳科目なしの基本テンプレート。ユーザーが自由に科目を追加できます",
+  "industry_name": "汎用",
+  "is_shared": true,
+  "items": [
+    {
+      "category": "売上高",
+      "account_name": "売上高",
+      "display_order": 1,
+      "parent_id": null,
+      "level": 0,
+      "calculation_formula": null,
+      "is_total": true
+    },
+    {
+      "category": "売上原価",
+      "account_name": "売上原価",
+      "display_order": 10,
+      "parent_id": null,
+      "level": 0,
+      "calculation_formula": null,
+      "is_total": true
+    },
+    {
+      "category": "売上総利益",
+      "account_name": "売上総利益",
+      "display_order": 20,
+      "parent_id": null,
+      "level": 0,
+      "calculation_formula": null,
+      "is_total": true
+    }
+  ]
+}

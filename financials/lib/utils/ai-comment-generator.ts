@@ -412,13 +412,15 @@ async function generateGrowthComment(analysis: FinancialAnalysis): Promise<strin
   const periods = analysis.periods
   const salesTrend = periods.map((p) => ({
     year: p.fiscalYear,
-    sales: p.profitLoss.netSales,
+    sales: p.profitLoss.netSales ?? 0,
   }))
 
   // 売上高の前年比変化を計算
   const salesChanges = salesTrend.slice(1).map((current, index) => {
     const previous = salesTrend[index]
-    const changeRate = previous.sales > 0 ? ((current.sales - previous.sales) / previous.sales) * 100 : 0
+    const prevSales = previous.sales ?? 0
+    const currSales = current.sales ?? 0
+    const changeRate = prevSales > 0 ? ((currSales - prevSales) / prevSales) * 100 : 0
     return {
       year: current.year,
       changeRate: changeRate,

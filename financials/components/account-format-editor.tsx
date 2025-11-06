@@ -94,7 +94,7 @@ export function AccountFormatEditor({
         setItems(format.items || [])
       }
     } catch (err) {
-      console.error('フォーマットの取得に失敗しました:', err)
+      console.error('テンプレートの取得に失敗しました:', err)
     } finally {
       setLoading(false)
     }
@@ -123,7 +123,7 @@ export function AccountFormatEditor({
 
   const handleSave = async () => {
     if (!name.trim()) {
-      alert('フォーマット名を入力してください')
+      alert('テンプレート名を入力してください')
       return
     }
 
@@ -162,7 +162,7 @@ export function AccountFormatEditor({
         throw new Error(data.error || '保存に失敗しました')
       }
 
-      alert('フォーマットを保存しました')
+      alert('テンプレートを保存しました')
       if (onSave) onSave(data.format.id)
     } catch (err) {
       alert(err instanceof Error ? err.message : 'エラーが発生しました')
@@ -177,7 +177,7 @@ export function AccountFormatEditor({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>
-              {formatId ? 'フォーマット編集' : '新規フォーマット作成'}
+              {formatId ? 'テンプレート編集' : '新規テンプレート作成'}
             </CardTitle>
             <CardDescription>
               売上高・売上原価・売上総利益の科目体系を設定します
@@ -195,12 +195,12 @@ export function AccountFormatEditor({
         {/* 基本情報 */}
         <div className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">フォーマット名 *</Label>
+            <Label htmlFor="name">テンプレート名 *</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="例: 製造業フォーマット"
+              placeholder="例: 製造業テンプレート"
             />
           </div>
 
@@ -210,7 +210,7 @@ export function AccountFormatEditor({
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="フォーマットの説明を入力してください"
+              placeholder="テンプレートの説明を入力してください"
               rows={3}
             />
           </div>
@@ -239,7 +239,7 @@ export function AccountFormatEditor({
               onCheckedChange={setIsShared}
             />
             <Label htmlFor="is_shared" className="cursor-pointer">
-              他のユーザーと共有する（共有フォーマットとして公開）
+              他のユーザーと共有する（共有テンプレートとして公開）
             </Label>
           </div>
         </div>

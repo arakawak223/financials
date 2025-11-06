@@ -1,6 +1,6 @@
 {
-  "name": "製造業標準テンプレート",
-  "description": "製造業向けの標準的な科目体系テンプレート",
+  "name": "製造業テンプレート",
+  "description": "製造業向けの売上高・売上原価の内訳科目テンプレート",
   "industry_name": "製造業",
   "is_shared": true,
   "items": [

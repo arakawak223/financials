@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 
-type Step = 'company' | 'period' | 'upload' | 'review'
+type Step = 'industry' | 'template' | 'company' | 'period' | 'upload' | 'review'
 
 interface AccountFormat {
   id: string
@@ -30,7 +30,7 @@ interface AccountFormat {
 
 export default function NewAnalysisPage() {
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState<Step>('company')
+  const [currentStep, setCurrentStep] = useState<Step>('industry')
   const [isProcessing, setIsProcessing] = useState(false)
   const [processingStatus, setProcessingStatus] = useState('')
 
@@ -66,7 +66,7 @@ export default function NewAnalysisPage() {
     })
   }
 
-  // 利用可能なフォーマット一覧を取得
+  // 利用可能なテンプレート一覧を取得
   useEffect(() => {
     const fetchFormats = async () => {
       try {
@@ -76,29 +76,29 @@ export default function NewAnalysisPage() {
           setFormats(data.formats || [])
         }
       } catch (err) {
-        console.error('フォーマットの取得に失敗しました:', err)
+        console.error('テンプレートの取得に失敗しました:', err)
       }
     }
     fetchFormats()
   }, [])
 
-  // 業種選択時に該当する業種のデフォルトフォーマットを自動適用
+  // 業種選択時に該当する業種のデフォルトテンプレートを自動適用
   useEffect(() => {
     if (!industryId || formats.length === 0) return
 
-    // 業種に一致する共有フォーマットを探す
+    // 業種に一致する共有テンプレートを探す
     const matchingFormat = formats.find(
       (f) => f.is_shared && f.industry?.id === industryId
     )
 
     if (matchingFormat && !formatId) {
-      // まだフォーマットが選択されていない場合のみ自動選択
+      // まだテンプレートが選択されていない場合のみ自動選択
       setFormatId(matchingFormat.id)
     }
-  }, [industryId, formats])
+  }, [industryId, formats, formatId])
 
   const handleNext = () => {
-    const steps: Step[] = ['company', 'period', 'upload', 'review']
+    const steps: Step[] = ['industry', 'template', 'company', 'period', 'upload', 'review']
     const currentIndex = steps.indexOf(currentStep)
     if (currentIndex < steps.length - 1) {
       setCurrentStep(steps[currentIndex + 1])
@@ -106,7 +106,7 @@ export default function NewAnalysisPage() {
   }
 
   const handleBack = () => {
-    const steps: Step[] = ['company', 'period', 'upload', 'review']
+    const steps: Step[] = ['industry', 'template', 'company', 'period', 'upload', 'review']
     const currentIndex = steps.indexOf(currentStep)
     if (currentIndex > 0) {
       setCurrentStep(steps[currentIndex - 1])
@@ -259,7 +259,9 @@ export default function NewAnalysisPage() {
       <div className="mb-8">
         <div className="flex justify-between">
           {[
-            { key: 'company', label: '企業情報' },
+            { key: 'industry', label: '業種' },
+            { key: 'template', label: 'テンプレート' },
+            { key: 'company', label: '企業名' },
             { key: 'period', label: '対象期間' },
             { key: 'upload', label: 'ファイル' },
             { key: 'review', label: '確認' },
@@ -280,7 +282,7 @@ export default function NewAnalysisPage() {
                 </div>
                 <span className="text-sm mt-2">{step.label}</span>
               </div>
-              {index < 3 && (
+              {index < 5 && (
                 <div className="flex-1 h-0.5 bg-gray-200 mx-2 mt-[-20px]" />
               )}
             </div>
@@ -290,10 +292,96 @@ export default function NewAnalysisPage() {
 
       {/* ステップコンテンツ */}
       <Card className="p-6 mb-6">
-        {/* ステップ1: 企業情報 */}
+        {/* ステップ1: 業種選択 */}
+        {currentStep === 'industry' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold">業種選択</h2>
+            <p className="text-gray-600">
+              分析対象企業の業種を選択してください。業種に応じた科目テンプレートが自動的に選択されます。
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="industry">業種 *</Label>
+                <select
+                  id="industry"
+                  className="w-full border rounded-md px-3 py-2 mt-1"
+                  value={industryId}
+                  onChange={(e) => setIndustryId(e.target.value)}
+                >
+                  <option value="">選択してください</option>
+                  <option value="mfg">製造業</option>
+                  <option value="retail">小売業</option>
+                  <option value="svc">サービス業</option>
+                  <option value="const">建設業</option>
+                  <option value="whole">卸売業</option>
+                  <option value="it">情報通信業</option>
+                  <option value="trans">運輸業</option>
+                  <option value="re">不動産業</option>
+                  <option value="other">その他</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ステップ2: テンプレート選択 */}
+        {currentStep === 'template' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold">科目テンプレート選択</h2>
+            <p className="text-gray-600">
+              売上高・売上原価の科目体系テンプレートを選択してください。業種に応じたテンプレートが自動選択されています。
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="format">科目体系テンプレート</Label>
+                <Select value={formatId || '__none__'} onValueChange={(value) => setFormatId(value === '__none__' ? '' : value)}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="テンプレートを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">使用しない</SelectItem>
+                    {formats.map((format) => (
+                      <SelectItem key={format.id} value={format.id}>
+                        {format.name}
+                        {format.description ? ` - ${format.description}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500 mt-2">
+                  科目体系テンプレートを使用すると、売上高・売上原価の詳細入力が簡単になります。
+                  テンプレートは後から<a href="/account-formats" className="text-blue-600 underline" target="_blank">科目テンプレート管理画面</a>でカスタマイズできます。
+                </p>
+              </div>
+
+              {formatId && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                  <p className="text-sm text-blue-800 font-semibold mb-2">
+                    選択中のテンプレート
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    {formats.find((f) => f.id === formatId)?.name || ''}
+                  </p>
+                  {formats.find((f) => f.id === formatId)?.description && (
+                    <p className="text-xs text-blue-700 mt-1">
+                      {formats.find((f) => f.id === formatId)?.description}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ステップ3: 企業名 */}
         {currentStep === 'company' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold">企業情報</h2>
+            <h2 className="text-2xl font-semibold">企業名入力</h2>
+            <p className="text-gray-600">
+              分析対象企業の名称を入力してください。
+            </p>
 
             <div className="space-y-4">
               <div>
@@ -309,52 +397,38 @@ export default function NewAnalysisPage() {
                 />
               </div>
 
-              <div>
-                <Label htmlFor="industry">業種</Label>
-                <select
-                  id="industry"
-                  className="w-full border rounded-md px-3 py-2 mt-1"
-                  value={industryId}
-                  onChange={(e) => setIndustryId(e.target.value)}
-                >
-                  <option value="">選択してください</option>
-                  <option value="mfg">製造業</option>
-                  <option value="const">建設業</option>
-                  <option value="whole">卸売業</option>
-                  <option value="retail">小売業</option>
-                  <option value="it">情報通信業</option>
-                  <option value="trans">運輸業</option>
-                  <option value="re">不動産業</option>
-                  <option value="svc">サービス業</option>
-                  <option value="other">その他</option>
-                </select>
-              </div>
-
-              <div>
-                <Label htmlFor="format">科目体系フォーマット</Label>
-                <Select value={formatId || '__none__'} onValueChange={(value) => setFormatId(value === '__none__' ? '' : value)}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="フォーマットを選択（任意）" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">使用しない</SelectItem>
-                    {formats.map((format) => (
-                      <SelectItem key={format.id} value={format.id}>
-                        {format.name}
-                        {format.description ? ` - ${format.description}` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500 mt-1">
-                  科目体系フォーマットを選択すると、売上高・売上原価の詳細入力が簡単になります
-                </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                <div className="text-sm text-blue-800">
+                  <p className="font-semibold mb-2">選択済みの情報</p>
+                  <p>
+                    <span className="font-medium">業種:</span>{' '}
+                    {industryId
+                      ? {
+                          mfg: '製造業',
+                          const: '建設業',
+                          whole: '卸売業',
+                          retail: '小売業',
+                          it: '情報通信業',
+                          trans: '運輸業',
+                          re: '不動産業',
+                          svc: 'サービス業',
+                          other: 'その他',
+                        }[industryId]
+                      : '未選択'}
+                  </p>
+                  <p className="mt-1">
+                    <span className="font-medium">テンプレート:</span>{' '}
+                    {formatId
+                      ? formats.find((f) => f.id === formatId)?.name || '不明'
+                      : '使用しない'}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* ステップ2: 対象期間 */}
+        {/* ステップ4: 対象期間 */}
         {currentStep === 'period' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold">対象期間</h2>
@@ -412,7 +486,7 @@ export default function NewAnalysisPage() {
           </div>
         )}
 
-        {/* ステップ3: ファイルアップロード */}
+        {/* ステップ5: ファイルアップロード */}
         {currentStep === 'upload' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold">PDFファイルアップロード</h2>
@@ -424,7 +498,7 @@ export default function NewAnalysisPage() {
           </div>
         )}
 
-        {/* ステップ4: 確認 */}
+        {/* ステップ6: 確認 */}
         {currentStep === 'review' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold">内容確認</h2>
@@ -455,10 +529,10 @@ export default function NewAnalysisPage() {
               </div>
 
               <div className="border-b pb-3">
-                <p className="text-sm text-gray-600">科目体系フォーマット</p>
+                <p className="text-sm text-gray-600">科目体系テンプレート</p>
                 <p className="text-lg font-medium">
                   {formatId
-                    ? formats.find((f) => f.id === formatId)?.name || '不明なフォーマット'
+                    ? formats.find((f) => f.id === formatId)?.name || '不明なテンプレート'
                     : '使用しない'}
                 </p>
               </div>
@@ -492,7 +566,7 @@ export default function NewAnalysisPage() {
         <Button
           variant="outline"
           onClick={handleBack}
-          disabled={currentStep === 'company'}
+          disabled={currentStep === 'industry'}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           戻る
@@ -502,6 +576,7 @@ export default function NewAnalysisPage() {
           <Button
             onClick={handleNext}
             disabled={
+              (currentStep === 'industry' && !industryId) ||
               (currentStep === 'company' && !companyName) ||
               (currentStep === 'upload' && uploadedFiles.length === 0)
             }

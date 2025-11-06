@@ -1,6 +1,6 @@
 {
-  "name": "サービス業標準テンプレート",
-  "description": "サービス業向けの標準的な科目体系テンプレート",
+  "name": "サービス業テンプレート",
+  "description": "サービス業向けの売上高・売上原価の内訳科目テンプレート",
   "industry_name": "サービス業",
   "is_shared": true,
   "items": [

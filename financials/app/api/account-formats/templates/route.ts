@@ -27,7 +27,14 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json({ templates })
+    // シンプルテンプレートを最初に、その後はアルファベット順
+    const sortedTemplates = templates.sort((a, b) => {
+      if (a.id === 'simple') return -1
+      if (b.id === 'simple') return 1
+      return a.id.localeCompare(b.id)
+    })
+
+    return NextResponse.json({ templates: sortedTemplates })
   } catch (error) {
     console.error('Templates fetch error:', error)
     return NextResponse.json(

@@ -1,5 +1,6 @@
 // PDF処理ユーティリティ
 import * as pdfjsLib from 'pdfjs-dist'
+import { createWorker } from 'tesseract.js'
 import type { PdfExtractResult, FileType, AccountDetail, AccountType } from '../types/financial'
 import { extractFinancialDataHybrid } from './ai-financial-extractor'
 

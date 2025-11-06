@@ -40,6 +40,14 @@ interface AccountFormat {
   updated_at: string
 }
 
+interface Template {
+  id: string
+  name: string
+  description: string
+  industry_name: string
+  items_count: number
+}
+
 interface AccountFormatListProps {
   onEdit?: (format: AccountFormat) => void
   onDelete?: (formatId: string) => void
@@ -52,11 +60,13 @@ export function AccountFormatList({
   onCreate,
 }: AccountFormatListProps) {
   const [formats, setFormats] = useState<AccountFormat[]>([])
+  const [templates, setTemplates] = useState<Template[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchFormats()
+    fetchTemplates()
   }, [])
 
   const fetchFormats = async () => {
@@ -66,7 +76,7 @@ export function AccountFormatList({
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'フォーマットの取得に失敗しました')
+        throw new Error(data.error || 'テンプレートの取得に失敗しました')
       }
 
       setFormats(data.formats || [])
@@ -78,8 +88,21 @@ export function AccountFormatList({
     }
   }
 
+  const fetchTemplates = async () => {
+    try {
+      const response = await fetch('/api/account-formats/templates')
+      const data = await response.json()
+
+      if (response.ok) {
+        setTemplates(data.templates || [])
+      }
+    } catch (err) {
+      console.error('テンプレートの取得に失敗しました:', err)
+    }
+  }
+
   const handleDelete = async (formatId: string) => {
-    if (!confirm('このフォーマットを削除してもよろしいですか？')) {
+    if (!confirm('このテンプレートを削除してもよろしいですか？')) {
       return
     }
 
@@ -90,7 +113,7 @@ export function AccountFormatList({
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || 'フォーマットの削除に失敗しました')
+        throw new Error(data.error || 'テンプレートの削除に失敗しました')
       }
 
       // リストから削除
@@ -102,19 +125,19 @@ export function AccountFormatList({
   }
 
   const handleCopy = async (format: AccountFormat) => {
-    const newName = prompt(`コピー先のフォーマット名を入力してください`, `${format.name}のコピー`)
+    const newName = prompt(`コピー先のテンプレート名を入力してください`, `${format.name}のコピー`)
     if (!newName) return
 
     try {
-      // フォーマットを取得してコピー
+      // テンプレートを取得してコピー
       const response = await fetch(`/api/account-formats/${format.id}`)
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'フォーマットの取得に失敗しました')
+        throw new Error(data.error || 'テンプレートの取得に失敗しました')
       }
 
-      // 新しいフォーマットとして作成
+      // 新しいテンプレートとして作成
       const createResponse = await fetch('/api/account-formats', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -122,17 +145,17 @@ export function AccountFormatList({
           name: newName,
           description: data.format.description ? `${data.format.description}（コピー）` : null,
           industry_id: data.format.industry_id,
-          is_shared: false, // コピーは専用フォーマットとして作成
+          is_shared: false, // コピーは専用テンプレートとして作成
           items: data.format.items || [],
         }),
       })
 
       if (!createResponse.ok) {
         const errorData = await createResponse.json()
-        throw new Error(errorData.error || 'フォーマットのコピーに失敗しました')
+        throw new Error(errorData.error || 'テンプレートのコピーに失敗しました')
       }
 
-      alert('フォーマットをコピーしました')
+      alert('テンプレートをコピーしました')
       fetchFormats() // リストを再読み込み
     } catch (err) {
       alert(err instanceof Error ? err.message : 'エラーが発生しました')
@@ -141,12 +164,12 @@ export function AccountFormatList({
 
   const handleExport = async (format: AccountFormat) => {
     try {
-      // フォーマット詳細を取得
+      // テンプレート詳細を取得
       const response = await fetch(`/api/account-formats/${format.id}`)
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'フォーマットの取得に失敗しました')
+        throw new Error(data.error || 'テンプレートの取得に失敗しました')
       }
 
       // エクスポート用のデータを作成（ID以外をエクスポート）
@@ -171,7 +194,7 @@ export function AccountFormatList({
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `format_${format.name}_${new Date().toISOString().split('T')[0]}.json`
+      a.download = `template_${format.name}_${new Date().toISOString().split('T')[0]}.json`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -196,10 +219,10 @@ export function AccountFormatList({
 
         // バリデーション
         if (!importData.name || !Array.isArray(importData.items)) {
-          throw new Error('無効なフォーマットファイルです')
+          throw new Error('無効なテンプレートファイルです')
         }
 
-        // フォーマットを作成
+        // テンプレートを作成
         const createResponse = await fetch('/api/account-formats', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -208,16 +231,37 @@ export function AccountFormatList({
 
         if (!createResponse.ok) {
           const errorData = await createResponse.json()
-          throw new Error(errorData.error || 'フォーマットのインポートに失敗しました')
+          throw new Error(errorData.error || 'テンプレートのインポートに失敗しました')
         }
 
-        alert('フォーマットをインポートしました')
+        alert('テンプレートをインポートしました')
         fetchFormats() // リストを再読み込み
       } catch (err) {
         alert(err instanceof Error ? err.message : 'エラーが発生しました')
       }
     }
     input.click()
+  }
+
+  const handleCreateFromTemplate = async (templateId: string) => {
+    try {
+      // テンプレート適用APIを呼び出す
+      const response = await fetch(`/api/account-formats/templates/${templateId}/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'テンプレートの適用に失敗しました')
+      }
+
+      alert('テンプレートから科目テンプレートを作成しました')
+      fetchFormats() // リストを再読み込み
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'エラーが発生しました')
+    }
   }
 
   if (loading) {
@@ -244,37 +288,83 @@ export function AccountFormatList({
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>科目フォーマット管理</CardTitle>
-          <CardDescription>
-            売上高・売上原価・売上総利益の科目体系を管理します
-          </CardDescription>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={handleImport} variant="outline">
-            <Upload className="mr-2 h-4 w-4" />
-            インポート
-          </Button>
-          {onCreate && (
-            <Button onClick={onCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              新規作成
+    <div className="space-y-6">
+      {/* テンプレートセクション */}
+      {templates.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>テンプレート</CardTitle>
+            <CardDescription>
+              業種別の科目体系テンプレートを選択できます
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {templates.map((template) => (
+                <Card key={template.id} className="border-2 hover:border-primary cursor-pointer transition-colors">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">{template.name}</CardTitle>
+                    <CardDescription className="text-xs">
+                      {template.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-1">
+                      <Badge variant="secondary" className="text-xs">
+                        {template.industry_name}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground">
+                        {template.items_count}件の科目
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleCreateFromTemplate(template.id)}
+                    >
+                      <Plus className="mr-1 h-3 w-3" />
+                      このテンプレートを使用
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* テンプレート管理セクション */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>科目テンプレート管理</CardTitle>
+            <CardDescription>
+              売上高・売上原価・売上総利益の科目体系を管理します
+            </CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handleImport} variant="outline">
+              <Upload className="mr-2 h-4 w-4" />
+              インポート
             </Button>
-          )}
-        </div>
-      </CardHeader>
+            {onCreate && (
+              <Button onClick={onCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                新規作成
+              </Button>
+            )}
+          </div>
+        </CardHeader>
       <CardContent>
         {formats.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">
-            フォーマットが登録されていません
+            テンプレートが登録されていません
           </p>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>フォーマット名</TableHead>
+                <TableHead>テンプレート名</TableHead>
                 <TableHead>業種</TableHead>
                 <TableHead>科目数</TableHead>
                 <TableHead>公開設定</TableHead>
@@ -357,5 +447,6 @@ export function AccountFormatList({
         )}
       </CardContent>
     </Card>
+    </div>
   )
 }
