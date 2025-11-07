@@ -74,7 +74,7 @@ export async function GET(
         balance_sheet_items(*),
         profit_loss_items(*),
         manual_inputs(*),
-        account_details(*, format_item_id),
+        account_details(*),
         financial_metrics(*)
       `
       )
