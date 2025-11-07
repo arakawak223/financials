@@ -38,6 +38,7 @@ export type AccountType =
   | 'accrued_expenses'       // 未払費用
   | 'executive_compensation' // 役員報酬
   | 'rent_expenses'          // 地代家賃
+  | 'other'                  // その他
 
 // ========================================
 // 手入力タイプ
