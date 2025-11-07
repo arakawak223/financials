@@ -260,20 +260,28 @@ export async function POST(request: NextRequest) {
 
       // 勘定科目内訳を保存
       if (period.accountDetails && period.accountDetails.length > 0) {
+        // 既存のaccount_detailsを削除
+        await supabase
+          .from('account_details')
+          .delete()
+          .eq('period_id', periodId)
+
+        // 新しいデータを挿入
         const accountDetailsData = period.accountDetails.map((detail) => ({
           period_id: periodId,
           account_category: detail.accountType,
           account_name: detail.itemName,
           amount: detail.amount,
           notes: detail.note,
+          format_item_id: detail.formatItemId || null,  // format_item_idを追加
         }))
 
         const { error: detailsError } = await supabase
           .from('account_details')
-          .upsert(accountDetailsData)
+          .insert(accountDetailsData)
 
         if (detailsError) {
-          console.error('Account details error:', detailsError)
+          console.error('Account details insert error:', detailsError)
         }
       }
 

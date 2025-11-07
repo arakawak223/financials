@@ -40,6 +40,29 @@ export function FinancialDataTable({ periods, unit, formatId, onUpdate }: Financ
   // periodsが変更されたら編集内容をリセット
   useEffect(() => {
     setEditedPeriods(periods)
+
+    // periodsからaccount_detailsを抽出してformatItemValuesに変換
+    if (periods && periods.length > 0) {
+      const newFormatItemValues: Record<number, Record<string, number | undefined>> = {}
+
+      periods.forEach((period, periodIndex) => {
+        if (period.accountDetails && Array.isArray(period.accountDetails)) {
+          // accountDetailsから科目テンプレート関連のデータを抽出
+          period.accountDetails.forEach((detail) => {
+            if (detail.formatItemId) {
+              // format_item_idが存在する場合のみformatItemValuesに追加
+              if (!newFormatItemValues[periodIndex]) {
+                newFormatItemValues[periodIndex] = {}
+              }
+              newFormatItemValues[periodIndex][detail.formatItemId] = detail.amount
+            }
+          })
+        }
+      })
+
+      console.log('🔄 Format item values loaded from periods:', newFormatItemValues)
+      setFormatItemValues(newFormatItemValues)
+    }
   }, [periods])
 
   // フォーマットを取得
@@ -71,7 +94,35 @@ export function FinancialDataTable({ periods, unit, formatId, onUpdate }: Financ
 
   const handleSave = () => {
     if (onUpdate) {
-      onUpdate(editedPeriods)
+      // formatItemValuesをeditedPeriodsのaccountDetailsにマージ
+      const periodsWithFormatItems = editedPeriods.map((period, periodIndex) => {
+        const formatItemsForThisPeriod = formatItemValues[periodIndex] || {}
+
+        // 既存のaccountDetailsをコピー（format_item_idを持たないもの）
+        const existingAccountDetails = (period.accountDetails || []).filter(
+          (detail) => !detail.formatItemId
+        )
+
+        // formatItemValuesから新しいaccountDetailsを作成
+        const newFormatAccountDetails = Object.entries(formatItemsForThisPeriod).map(
+          ([formatItemId, amount]) => ({
+            accountType: 'other' as const,
+            amount,
+            formatItemId,
+          })
+        )
+
+        return {
+          ...period,
+          accountDetails: [
+            ...existingAccountDetails,
+            ...newFormatAccountDetails,
+          ],
+        }
+      })
+
+      console.log('💾 Saving with format items:', periodsWithFormatItems)
+      onUpdate(periodsWithFormatItems)
     }
     setIsEditing(false)
   }

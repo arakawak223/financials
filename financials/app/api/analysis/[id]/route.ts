@@ -74,7 +74,7 @@ export async function GET(
         balance_sheet_items(*),
         profit_loss_items(*),
         manual_inputs(*),
-        account_details(*),
+        account_details(*, format_item_id),
         financial_metrics(*)
       `
       )
@@ -145,6 +145,7 @@ export async function GET(
         itemName: detail.account_name,
         amount: detail.amount,
         note: detail.notes,
+        formatItemId: detail.format_item_id, // 科目テンプレート項目IDを追加
       }))
 
       return {
@@ -220,6 +221,7 @@ export async function GET(
       fiscalYearStart: analysis.fiscal_year_start,
       fiscalYearEnd: analysis.fiscal_year_end,
       periodsCount: analysis.periods_count,
+      formatId: analysis.format_id,  // 科目テンプレートIDを追加
       status: analysis.status,
       periods,
       comments,

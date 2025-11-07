@@ -196,6 +196,7 @@ export interface AccountDetail {
   itemName?: string
   amount?: number
   note?: string
+  formatItemId?: string  // 科目テンプレート項目ID
 }
 
 // ========================================
