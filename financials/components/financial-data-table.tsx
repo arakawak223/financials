@@ -585,69 +585,6 @@ export function FinancialDataTable({ periods, unit, formatId, onUpdate }: Financ
                 </div>
               )}
 
-              {/* 売上総利益 */}
-              {format.items.some((item) => item.category === '売上総利益') && (
-                <div>
-                  <h4 className="font-semibold mb-2 text-lg">売上総利益</h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left p-2 font-semibold">科目名</th>
-                          {editedPeriods.map((period) => (
-                            <th key={period.fiscalYear} className="text-right p-2 font-semibold">
-                              {period.fiscalYear}年度
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {format.items
-                          .filter((item) => item.category === '売上総利益')
-                          .sort((a, b) => a.display_order - b.display_order)
-                          .map((item) => (
-                            <tr
-                              key={item.id}
-                              className={`border-b hover:bg-gray-50 ${
-                                item.is_total ? 'bg-blue-50 font-semibold' : ''
-                              }`}
-                            >
-                              <td
-                                className="p-2"
-                                style={{ paddingLeft: `${item.level * 20 + 8}px` }}
-                              >
-                                {item.account_name}
-                                {item.is_total && ' (合計)'}
-                              </td>
-                              {editedPeriods.map((period, periodIndex) => {
-                                const currentValue = formatItemValues[periodIndex]?.[item.id]
-                                return (
-                                  <td key={period.fiscalYear} className="p-2 text-right">
-                                    {isEditing && !item.is_total ? (
-                                      <input
-                                        type="text"
-                                        className="w-full text-right border rounded px-2 py-1"
-                                        placeholder="0"
-                                        value={currentValue?.toLocaleString() || ''}
-                                        onChange={(e) =>
-                                          updateFormatItemValue(periodIndex, item.id, e.target.value)
-                                        }
-                                      />
-                                    ) : (
-                                      <span className={item.is_total ? 'font-semibold' : ''}>
-                                        {formatValue(currentValue)}
-                                      </span>
-                                    )}
-                                  </td>
-                                )
-                              })}
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </Card>

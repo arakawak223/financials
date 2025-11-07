@@ -154,15 +154,16 @@ export async function POST(
       // 新しい明細を挿入（科目テンプレートとマッチング）
       const accountDetailsData = extractedData.accountDetails.map((detail: any) => {
         const accountName = detail.account_name || detail.itemName
+        const accountCategory = detail.account_category || detail.accountType || 'other'
 
-        // 科目テンプレートの項目と名前でマッチング
+        // 科目テンプレートの項目と名前＋カテゴリーでマッチング
         const matchedFormatItem = formatItems.find(
-          (item) => item.account_name === accountName
+          (item) => item.account_name === accountName && item.category === accountCategory
         )
 
         const data: any = {
           period_id: periodId,
-          account_category: detail.account_category || detail.accountType || 'other',
+          account_category: accountCategory,
           account_name: accountName,
           amount: detail.amount,
           notes: detail.notes || detail.note,
@@ -171,9 +172,9 @@ export async function POST(
         // マッチした場合、format_item_idを設定
         if (matchedFormatItem) {
           data.format_item_id = matchedFormatItem.id
-          console.log(`  ✅ マッチング: "${accountName}" → format_item_id: ${matchedFormatItem.id}`)
+          console.log(`  ✅ マッチング: [${accountCategory}] "${accountName}" → format_item_id: ${matchedFormatItem.id}`)
         } else {
-          console.log(`  ⚠️  マッチなし: "${accountName}"`)
+          console.log(`  ⚠️  マッチなし: [${accountCategory}] "${accountName}"`)
         }
 
         return data
