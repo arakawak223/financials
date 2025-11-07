@@ -3,17 +3,21 @@ import OpenAI from 'openai'
 import type { FinancialAnalysis, AnalysisComment, CommentType } from '../types/financial'
 
 // OpenAI クライアントを取得（遅延初期化）
+// サーバーサイド専用（API routesから呼び出される）
 function getOpenAIClient(): OpenAI | null {
-  const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY
+  const apiKey = process.env.OPENAI_API_KEY
 
   if (!apiKey) {
-    console.warn('OpenAI API key is not set. AI comment generation will be skipped.')
+    console.warn('⚠️ OPENAI_API_KEY is not set in environment variables. AI comment generation will be skipped.')
+    console.warn('Please set OPENAI_API_KEY in Vercel environment variables.')
     return null
   }
 
+  console.log('✅ OpenAI API key found, length:', apiKey.length)
+
   return new OpenAI({
     apiKey,
-    dangerouslyAllowBrowser: true, // クライアントサイドで使用する場合
+    // サーバーサイド専用なので dangerouslyAllowBrowser は不要
   })
 }
 

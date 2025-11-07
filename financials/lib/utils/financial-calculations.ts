@@ -42,7 +42,22 @@ export function calculateCurrentRatio(data: PeriodFinancialData): number | null 
   const currentAssets = (balanceSheet as DbBalanceSheet).current_assets_total ?? balanceSheet.totalCurrentAssets
   const currentLiabilities = (balanceSheet as DbBalanceSheet).current_liabilities_total ?? balanceSheet.totalCurrentLiabilities
 
-  if (!currentAssets || !currentLiabilities || currentLiabilities === 0) return null
+  console.log('🔍 流動比率計算:', {
+    current_assets_total: (balanceSheet as DbBalanceSheet).current_assets_total,
+    totalCurrentAssets: balanceSheet.totalCurrentAssets,
+    currentAssets,
+    current_liabilities_total: (balanceSheet as DbBalanceSheet).current_liabilities_total,
+    totalCurrentLiabilities: balanceSheet.totalCurrentLiabilities,
+    currentLiabilities,
+    result: currentAssets && currentLiabilities && currentLiabilities !== 0 ? (currentAssets / currentLiabilities) * 100 : null
+  })
+
+  // 0もfalseと判定されるため、明示的にnullとundefinedをチェック
+  if (currentAssets === null || currentAssets === undefined ||
+      currentLiabilities === null || currentLiabilities === undefined ||
+      currentLiabilities === 0) {
+    return null
+  }
 
   return (currentAssets / currentLiabilities) * 100
 }
