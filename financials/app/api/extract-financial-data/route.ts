@@ -32,7 +32,15 @@ export async function POST(request: NextRequest) {
       apiKey: apiKey,
     })
 
-    const message = await anthropic.messages.create({
+    // リトライ処理（Overloadedエラー対策）
+    let message
+    let retryCount = 0
+    const maxRetries = 3
+    const retryDelay = 2000 // 2秒
+
+    while (retryCount < maxRetries) {
+      try {
+        message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
       max_tokens: 4000,
       temperature: 0,
@@ -137,6 +145,27 @@ ${ocrText}
         },
       ],
     })
+        break // 成功したらループを抜ける
+      } catch (error: any) {
+        retryCount++
+        console.log(`⚠️  Claude API エラー (試行 ${retryCount}/${maxRetries}):`, error.message)
+
+        // Overloadedエラーまたはレート制限エラーの場合はリトライ
+        if (error.status === 529 || error.status === 429) {
+          if (retryCount < maxRetries) {
+            console.log(`🔄 ${retryDelay}ms 待機してリトライします...`)
+            await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount))
+            continue
+          }
+        }
+        // その他のエラーはすぐに投げる
+        throw error
+      }
+    }
+
+    if (!message) {
+      throw new Error('Claude API呼び出しが最大リトライ回数に達しました')
+    }
 
     console.log('✅ Claude API レスポンス受信')
     console.log('📊 使用トークン数:', {
