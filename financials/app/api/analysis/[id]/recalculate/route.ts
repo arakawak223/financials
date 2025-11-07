@@ -102,8 +102,17 @@ export async function POST(
         ? (p.profit_loss_items.length > 0 ? p.profit_loss_items[0] : {})
         : (p.profit_loss_items || {})
 
+      console.log(`📋 期間 ${p.fiscal_year} のデータ変換前:`)
+      console.log('  balanceSheetRaw:', JSON.stringify(balanceSheetRaw).substring(0, 200))
+      console.log('  current_assets_total:', (balanceSheetRaw as any)?.current_assets_total)
+      console.log('  current_liabilities_total:', (balanceSheetRaw as any)?.current_liabilities_total)
+
       const balanceSheetData = convertKeysToCamelCase<PeriodFinancialData['balanceSheet']>(balanceSheetRaw)
       const profitLossData = convertKeysToCamelCase<PeriodFinancialData['profitLoss']>(profitLossRaw)
+
+      console.log('  変換後 balanceSheetData:', JSON.stringify(balanceSheetData).substring(0, 200))
+      console.log('  currentAssetsTotal:', (balanceSheetData as any)?.currentAssetsTotal)
+      console.log('  currentLiabilitiesTotal:', (balanceSheetData as any)?.currentLiabilitiesTotal)
 
       const fixedAssetDisposalValue = p.manual_inputs?.find((m) => m.input_type === 'fixed_asset_disposal_value')?.amount
 
