@@ -24,6 +24,14 @@ function convertKeysToCamelCase<T = any>(obj: Record<string, any> | null | undef
 
 export async function POST(request: NextRequest) {
   try {
+    // 環境変数の状態を確認（デバッグ用）
+    const openaiKey = process.env.OPENAI_API_KEY
+    console.log('🔍 環境変数チェック:')
+    console.log('  OPENAI_API_KEY:', openaiKey ? `設定済み (長さ: ${openaiKey.length}, 先頭: ${openaiKey.substring(0, 7)})` : '❌ 未設定')
+    console.log('  NODE_ENV:', process.env.NODE_ENV)
+    console.log('  VERCEL:', process.env.VERCEL)
+    console.log('  VERCEL_ENV:', process.env.VERCEL_ENV)
+
     const supabase = await createClient()
 
     // 認証チェック（開発中は一時的に無効化）
