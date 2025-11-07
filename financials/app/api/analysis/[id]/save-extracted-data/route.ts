@@ -122,6 +122,25 @@ export async function POST(
     if (extractedData.accountDetails && extractedData.accountDetails.length > 0) {
       console.log('💾 勘定科目明細を保存:', extractedData.accountDetails.length, '件')
 
+      // 分析のformat_idを取得
+      const { data: analysisData } = await supabase
+        .from('financial_analyses')
+        .select('format_id')
+        .eq('id', analysisId)
+        .single()
+
+      let formatItems: any[] = []
+      if (analysisData?.format_id) {
+        // 科目テンプレートの項目を取得
+        const { data: formatItemsData } = await supabase
+          .from('account_format_items')
+          .select('id, account_name, category')
+          .eq('format_id', analysisData.format_id)
+
+        formatItems = formatItemsData || []
+        console.log('📋 科目テンプレート項目を取得:', formatItems.length, '件')
+      }
+
       // 既存の明細を削除
       const { error: deleteError } = await supabase
         .from('account_details')
@@ -132,14 +151,33 @@ export async function POST(
         console.error('Account details delete error:', deleteError)
       }
 
-      // 新しい明細を挿入
-      const accountDetailsData = extractedData.accountDetails.map((detail: any) => ({
-        period_id: periodId,
-        account_category: detail.account_category || detail.accountType || 'other',
-        account_name: detail.account_name || detail.itemName,
-        amount: detail.amount,
-        notes: detail.notes || detail.note,
-      }))
+      // 新しい明細を挿入（科目テンプレートとマッチング）
+      const accountDetailsData = extractedData.accountDetails.map((detail: any) => {
+        const accountName = detail.account_name || detail.itemName
+
+        // 科目テンプレートの項目と名前でマッチング
+        const matchedFormatItem = formatItems.find(
+          (item) => item.account_name === accountName
+        )
+
+        const data: any = {
+          period_id: periodId,
+          account_category: detail.account_category || detail.accountType || 'other',
+          account_name: accountName,
+          amount: detail.amount,
+          notes: detail.notes || detail.note,
+        }
+
+        // マッチした場合、format_item_idを設定
+        if (matchedFormatItem) {
+          data.format_item_id = matchedFormatItem.id
+          console.log(`  ✅ マッチング: "${accountName}" → format_item_id: ${matchedFormatItem.id}`)
+        } else {
+          console.log(`  ⚠️  マッチなし: "${accountName}"`)
+        }
+
+        return data
+      })
 
       const { error: insertError } = await supabase
         .from('account_details')
