@@ -39,14 +39,21 @@ export function calculateInterestBearingDebt(data: PeriodFinancialData): number 
  */
 export function calculateCurrentRatio(data: PeriodFinancialData): number | null {
   const { balanceSheet } = data
-  const currentAssets = (balanceSheet as DbBalanceSheet).current_assets_total ?? balanceSheet.totalCurrentAssets
-  const currentLiabilities = (balanceSheet as DbBalanceSheet).current_liabilities_total ?? balanceSheet.totalCurrentLiabilities
+  // キャメルケース変換後のプロパティ名を優先（currentAssetsTotal）
+  const currentAssets = (balanceSheet as DbBalanceSheet).current_assets_total ??
+                        (balanceSheet as any).currentAssetsTotal ??
+                        balanceSheet.totalCurrentAssets
+  const currentLiabilities = (balanceSheet as DbBalanceSheet).current_liabilities_total ??
+                             (balanceSheet as any).currentLiabilitiesTotal ??
+                             balanceSheet.totalCurrentLiabilities
 
   console.log('🔍 流動比率計算:', {
     current_assets_total: (balanceSheet as DbBalanceSheet).current_assets_total,
+    currentAssetsTotal: (balanceSheet as any).currentAssetsTotal,
     totalCurrentAssets: balanceSheet.totalCurrentAssets,
     currentAssets,
     current_liabilities_total: (balanceSheet as DbBalanceSheet).current_liabilities_total,
+    currentLiabilitiesTotal: (balanceSheet as any).currentLiabilitiesTotal,
     totalCurrentLiabilities: balanceSheet.totalCurrentLiabilities,
     currentLiabilities,
     result: currentAssets && currentLiabilities && currentLiabilities !== 0 ? (currentAssets / currentLiabilities) * 100 : null
@@ -337,10 +344,16 @@ export function calculateRoa(data: PeriodFinancialData): number | null {
  */
 export function calculateEquityRatio(data: PeriodFinancialData): number | null {
   const { balanceSheet } = data
-  const netAssets = (balanceSheet as DbBalanceSheet).total_net_assets ?? balanceSheet.totalNetAssets
-  const totalAssets = (balanceSheet as DbBalanceSheet).total_assets ?? balanceSheet.totalAssets
+  const netAssets = (balanceSheet as DbBalanceSheet).total_net_assets ??
+                    (balanceSheet as any).totalNetAssets
+  const totalAssets = (balanceSheet as DbBalanceSheet).total_assets ??
+                      (balanceSheet as any).totalAssets
 
-  if (!netAssets || !totalAssets || totalAssets === 0) return null
+  if (netAssets === null || netAssets === undefined ||
+      totalAssets === null || totalAssets === undefined ||
+      totalAssets === 0) {
+    return null
+  }
 
   return (netAssets / totalAssets) * 100
 }
