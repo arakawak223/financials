@@ -22,6 +22,52 @@ function getOpenAIClient(): OpenAI | null {
 }
 
 /**
+ * リトライ処理付きでOpenAI APIを呼び出す
+ */
+async function callOpenAIWithRetry(
+  openai: OpenAI,
+  params: OpenAI.Chat.ChatCompletionCreateParams,
+  commentType: string
+): Promise<string> {
+  const maxRetries = 5
+  const baseDelay = 3000 // 3秒
+  let retryCount = 0
+
+  while (retryCount < maxRetries) {
+    try {
+      console.log(`🤖 ${commentType} 生成中... (試行 ${retryCount + 1}/${maxRetries})`)
+      // stream: false を明示的に指定して ChatCompletion 型を確定
+      const response = await openai.chat.completions.create({ ...params, stream: false })
+      const content = response.choices[0]?.message?.content || ''
+      console.log(`✅ ${commentType} 生成成功`)
+      return content
+    } catch (error: any) {
+      retryCount++
+      const isRateLimitError = error?.status === 429 || error?.error?.type === 'rate_limit_error'
+      const isOverloadedError = error?.status === 529 || error?.error?.type === 'overloaded_error'
+      const isServerError = error?.status >= 500
+
+      console.log(`⚠️  ${commentType} 生成エラー (試行 ${retryCount}/${maxRetries}):`, error?.message || error)
+
+      // リトライ対象のエラーかチェック
+      if ((isRateLimitError || isOverloadedError || isServerError) && retryCount < maxRetries) {
+        // エクスポネンシャルバックオフ: 3秒 → 6秒 → 12秒 → 24秒 → 48秒
+        const delay = baseDelay * Math.pow(2, retryCount - 1)
+        console.log(`🔄 ${delay}ms 待機してリトライします...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+        continue
+      }
+
+      // その他のエラーまたはリトライ上限に達した場合
+      console.error(`❌ ${commentType} 生成失敗:`, error)
+      throw error
+    }
+  }
+
+  throw new Error(`${commentType} の生成が最大リトライ回数に達しました`)
+}
+
+/**
  * 財務分析データからAIコメントを生成
  */
 export async function generateAnalysisComments(
@@ -193,23 +239,26 @@ ${netIncomeTrend.map((t) => `${t.year}年度: ${formatMetric(t.netIncome, '円')
   console.log('当期純利益推移:', netIncomeTrend)
   console.log('プロンプト全文:\n', prompt)
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'system',
-        content: 'あなたは経験豊富な公認会計士・中小企業診断士として、企業の財務分析を行います。提供されたデータを正確に使用し、データを無視したり改変したりしないでください。',
-      },
-      { role: 'user', content: prompt },
-    ],
-    temperature: 0.3,
-    max_tokens: 500,
-  })
+  const generatedComment = await callOpenAIWithRetry(
+    openai,
+    {
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'あなたは経験豊富な公認会計士・中小企業診断士として、企業の財務分析を行います。提供されたデータを正確に使用し、データを無視したり改変したりしないでください。',
+        },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.3,
+      max_tokens: 500,
+    },
+    '総合評価コメント'
+  )
 
-  const generatedComment = response.choices[0]?.message?.content || 'コメントを生成できませんでした。'
-  console.log('✅ 総合評価コメント生成結果:\n', generatedComment)
+  console.log('📝 総合評価コメント生成結果:\n', generatedComment)
 
-  return generatedComment
+  return generatedComment || 'コメントを生成できませんでした。'
 }
 
 /**
@@ -235,14 +284,16 @@ async function generateLiquidityComment(analysis: FinancialAnalysis): Promise<st
 - 「課題」「改善の余地」など穏当な表現を使用してください
 `
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.7,
-    max_tokens: 300,
-  })
-
-  return response.choices[0]?.message?.content || '-'
+  return await callOpenAIWithRetry(
+    openai,
+    {
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 300,
+    },
+    '流動性コメント'
+  )
 }
 
 /**
@@ -312,21 +363,24 @@ ${operatingProfitMarginTrend.map((t) => `${t.year}年度: ${t.margin.toFixed(1)}
 
   console.log('🔍 収益性コメント生成 - 利益率推移:', { grossProfitMarginTrend, operatingProfitMarginTrend })
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'system',
-        content: '提供されたデータを正確に使用し、データを無視したり改変したりしないでください。',
-      },
-      { role: 'user', content: prompt },
-    ],
-    temperature: 0.3,
-    max_tokens: 300,
-  })
+  const generatedComment = await callOpenAIWithRetry(
+    openai,
+    {
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: '提供されたデータを正確に使用し、データを無視したり改変したりしないでください。',
+        },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.3,
+      max_tokens: 300,
+    },
+    '収益性コメント'
+  )
 
-  const generatedComment = response.choices[0]?.message?.content || '-'
-  console.log('✅ 収益性コメント生成結果:\n', generatedComment)
+  console.log('📝 収益性コメント生成結果:\n', generatedComment)
 
   return generatedComment
 }
@@ -369,20 +423,22 @@ ${hasInventory ? `- 棚卸資産滞留月数: ${formatMetric(metrics.inventoryTu
 - 「改善の余地」「効率化の機会」など建設的な表現を使用してください
 `
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'system',
-        content: '企業の業種や事業内容に応じた適切な財務分析を行います。製造業や小売業でない場合は、在庫や仕入について言及しません。',
-      },
-      { role: 'user', content: prompt }
-    ],
-    temperature: 0.7,
-    max_tokens: 300,
-  })
-
-  return response.choices[0]?.message?.content || '-'
+  return await callOpenAIWithRetry(
+    openai,
+    {
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: '企業の業種や事業内容に応じた適切な財務分析を行います。製造業や小売業でない場合は、在庫や仕入について言及しません。',
+        },
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 300,
+    },
+    '効率性コメント'
+  )
 }
 
 /**
@@ -410,14 +466,16 @@ async function generateSafetyComment(analysis: FinancialAnalysis): Promise<strin
 - 「注視が必要」「改善の余地」など穏当な表現を使用してください
 `
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.7,
-    max_tokens: 300,
-  })
-
-  return response.choices[0]?.message?.content || '-'
+  return await callOpenAIWithRetry(
+    openai,
+    {
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 300,
+    },
+    '安全性コメント'
+  )
 }
 
 /**
@@ -499,20 +557,22 @@ ${salesChanges.map((c) => `${c.year}年度: ${c.changeRate > 0 ? '+' : ''}${c.ch
   console.log('🔍 成長性コメント生成 - 売上高推移:', salesTrend)
   console.log('🔍 成長性コメント生成 - トレンド:', trendDescription)
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'system',
-        content: '提供されたデータを正確に使用し、データを無視したり改変したりしないでください。',
-      },
-      { role: 'user', content: prompt },
-    ],
-    temperature: 0.3,
-    max_tokens: 300,
-  })
-
-  const generatedComment = response.choices[0]?.message?.content || '-'
+  const generatedComment = await callOpenAIWithRetry(
+    openai,
+    {
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: '提供されたデータを正確に使用し、データを無視したり改変したりしないでください。',
+        },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.3,
+      max_tokens: 300,
+    },
+    '成長性コメント'
+  )
   console.log('✅ 成長性コメント生成結果:\n', generatedComment)
 
   return generatedComment
