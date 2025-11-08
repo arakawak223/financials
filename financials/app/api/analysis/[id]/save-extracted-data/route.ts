@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30; // データ保存・マッチング処理のため30秒に設定
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { PdfExtractResult } from '@/lib/types/financial'
