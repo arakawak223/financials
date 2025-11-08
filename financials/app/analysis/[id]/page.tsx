@@ -9,6 +9,7 @@ import { FinancialDataTable } from '@/components/financial-data-table'
 import { FinancialCharts, generateChartsFromMetrics } from '@/components/financial-charts'
 import { FinancialMetricsTable } from '@/components/financial-metrics-table'
 import { TrendAnalysisCharts } from '@/components/trend-analysis-charts'
+import { AnalysisComments } from '@/components/analysis-comments'
 import {
   calculateSalesCAGR,
   calculateOperatingIncomeCAGR,
@@ -229,31 +230,11 @@ export default function AnalysisDetailPage() {
       )}
 
       {/* AIコメント */}
-      {analysis.comments && analysis.comments.length > 0 && (
-        <div className="mb-6 space-y-4">
-          <h2 className="text-2xl font-semibold">AI分析コメント</h2>
-          {analysis.comments.map((comment) => {
-            const commentTitles: Record<string, string> = {
-              overall: '📊 総合評価',
-              liquidity: '💧 流動性分析',
-              profitability: '💰 収益性分析',
-              efficiency: '⚡効率性分析',
-              safety: '🛡️ 安全性分析',
-              growth: '📈 成長性分析',
-            }
-            const title = commentTitles[comment.commentType] || 'コメント'
-
-            return (
-              <Card key={comment.id} className="p-6">
-                <h3 className="text-lg font-semibold mb-3 text-blue-700">{title}</h3>
-                <div className="whitespace-pre-wrap text-gray-700">
-                  {comment.editedText || comment.aiGeneratedText}
-                </div>
-              </Card>
-            )
-          })}
-        </div>
-      )}
+      <AnalysisComments
+        analysisId={analysisId}
+        comments={analysis.comments}
+        onUpdate={loadAnalysis}
+      />
 
       {/* CAGR（年平均成長率） */}
       {analysis.periods.length >= 2 && (

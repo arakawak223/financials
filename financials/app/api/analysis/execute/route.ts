@@ -394,7 +394,7 @@ export async function POST(request: NextRequest) {
         id: c.id,
         commentType: c.comment_type,
         aiGeneratedText: c.ai_generated_text,
-        editedText: c.edited_text,
+        editedText: c.user_edited_text,
         isEdited: c.is_edited,
         displayOrder: c.display_order,
       }))
