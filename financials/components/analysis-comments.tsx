@@ -84,23 +84,57 @@ export function AnalysisComments({ analysisId, comments, onUpdate }: AnalysisCom
   }
 
   const handleRegenerateAll = async () => {
-    if (!confirm('全てのコメントを再生成しますか？\n（全てのAI生成テキストが上書きされます）')) {
+    if (!confirm('全てのコメントを再生成しますか？\n（全てのAI生成テキストが上書きされます）\n\n※6つのコメントを順次生成するため、数分かかる場合があります。')) {
       return
     }
 
     try {
       setRegeneratingAll(true)
+
+      // 既存のコメントIDを取得
       const response = await fetch(
         `/api/analysis/${analysisId}/comments/regenerate-all`,
         { method: 'POST' }
       )
 
       if (!response.ok) {
-        throw new Error('全再生成に失敗しました')
+        throw new Error('全再生成の準備に失敗しました')
       }
 
       const result = await response.json()
-      alert(`全コメントを再生成しました（${result.commentsCount}件）`)
+      const commentIds = result.commentIds || []
+
+      // 各コメントを順次再生成
+      let successCount = 0
+      let failCount = 0
+
+      for (const comment of commentIds) {
+        try {
+          const regenerateResponse = await fetch(
+            `/api/analysis/${analysisId}/comments/${comment.id}/regenerate`,
+            { method: 'POST' }
+          )
+
+          if (regenerateResponse.ok) {
+            successCount++
+            console.log(`✅ ${comment.type} 再生成完了 (${successCount}/${commentIds.length})`)
+          } else {
+            failCount++
+            console.error(`❌ ${comment.type} 再生成失敗`)
+          }
+        } catch (error) {
+          failCount++
+          console.error(`❌ ${comment.type} 再生成エラー:`, error)
+        }
+      }
+
+      // 結果を表示
+      if (failCount === 0) {
+        alert(`全コメントを再生成しました（${successCount}件）`)
+      } else {
+        alert(`コメント再生成が完了しました\n成功: ${successCount}件\n失敗: ${failCount}件`)
+      }
+
       onUpdate()
     } catch (error) {
       console.error('Regenerate all error:', error)
