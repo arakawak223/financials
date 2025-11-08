@@ -492,7 +492,19 @@ export function FinancialDataTable({ periods, unit, formatId, onUpdate }: Financ
                                 {item.is_total && ' (合計)'}
                               </td>
                               {editedPeriods.map((period, periodIndex) => {
-                                const currentValue = formatItemValues[periodIndex]?.[item.id]
+                                let currentValue = formatItemValues[periodIndex]?.[item.id]
+
+                                // 合計行の場合は同じカテゴリの他の項目の合計を計算
+                                if (item.is_total) {
+                                  const itemsInCategory = format.items.filter(
+                                    (i) => i.category === item.category && !i.is_total
+                                  )
+                                  currentValue = itemsInCategory.reduce((sum, i) => {
+                                    const value = formatItemValues[periodIndex]?.[i.id] || 0
+                                    return sum + value
+                                  }, 0)
+                                }
+
                                 return (
                                   <td key={period.fiscalYear} className="p-2 text-right">
                                     {isEditing && !item.is_total ? (
@@ -556,7 +568,19 @@ export function FinancialDataTable({ periods, unit, formatId, onUpdate }: Financ
                                 {item.is_total && ' (合計)'}
                               </td>
                               {editedPeriods.map((period, periodIndex) => {
-                                const currentValue = formatItemValues[periodIndex]?.[item.id]
+                                let currentValue = formatItemValues[periodIndex]?.[item.id]
+
+                                // 合計行の場合は同じカテゴリの他の項目の合計を計算
+                                if (item.is_total) {
+                                  const itemsInCategory = format.items.filter(
+                                    (i) => i.category === item.category && !i.is_total
+                                  )
+                                  currentValue = itemsInCategory.reduce((sum, i) => {
+                                    const value = formatItemValues[periodIndex]?.[i.id] || 0
+                                    return sum + value
+                                  }, 0)
+                                }
+
                                 return (
                                   <td key={period.fiscalYear} className="p-2 text-right">
                                     {isEditing && !item.is_total ? (
