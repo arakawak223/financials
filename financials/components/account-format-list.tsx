@@ -341,7 +341,7 @@ export function AccountFormatList({
           <div>
             <CardTitle>科目テンプレート管理</CardTitle>
             <CardDescription>
-              売上高・売上原価・売上総利益の科目体系を管理します
+              売上高/売上原価/売上総利益/販売費・一般管理費/営業外損益/特別損益の科目体系を管理します
             </CardDescription>
           </div>
           <div className="flex gap-2">

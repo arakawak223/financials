@@ -140,7 +140,7 @@ export function AccountFormatSelector({
       <CardHeader>
         <CardTitle>科目フォーマット選択</CardTitle>
         <CardDescription>
-          この企業で使用する科目体系フォーマットを選択してください
+          売上高/売上原価/売上総利益/販売費・一般管理費/営業外損益/特別損益の内訳科目を抽出・表示する科目体系フォーマットを選択してください
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -204,10 +204,11 @@ export function AccountFormatSelector({
               <div className="space-y-2">
                 <p className="text-sm font-medium">設定科目:</p>
                 <div className="grid grid-cols-3 gap-2">
-                  {['売上高', '売上原価', '売上総利益'].map((category) => {
+                  {['売上高', '売上原価', '売上総利益', '販売費・一般管理費', '営業外損益', '特別損益'].map((category) => {
                     const categoryItems = selectedFormat.items.filter(
                       (item) => item.category === category
                     )
+                    if (categoryItems.length === 0) return null
                     return (
                       <div
                         key={category}

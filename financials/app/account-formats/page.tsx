@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { AccountFormatList } from '@/components/account-format-list'
 import { AccountFormatEditor } from '@/components/account-format-editor'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 type ViewMode = 'list' | 'create' | 'edit'
 
@@ -29,10 +29,27 @@ interface AccountFormat {
   updated_at: string
 }
 
-export default function AccountFormatsPage() {
+function AccountFormatsPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [selectedFormatId, setSelectedFormatId] = useState<string | null>(null)
+  const [returnUrl, setReturnUrl] = useState<string | null>(null)
+
+  // URLパラメータから編集モードとリターンURLを取得
+  useEffect(() => {
+    const editParam = searchParams.get('edit')
+    const returnParam = searchParams.get('return')
+
+    if (editParam) {
+      setSelectedFormatId(editParam)
+      setViewMode('edit')
+    }
+
+    if (returnParam) {
+      setReturnUrl(decodeURIComponent(returnParam))
+    }
+  }, [searchParams])
 
   const handleCreate = () => {
     setSelectedFormatId(null)
@@ -45,13 +62,26 @@ export default function AccountFormatsPage() {
   }
 
   const handleSave = (formatId: string) => {
-    setViewMode('list')
-    setSelectedFormatId(null)
+    // リターンURLが設定されている場合は、そこに戻る
+    if (returnUrl) {
+      // フォーマットIDをURLパラメータに追加して戻る
+      const url = new URL(returnUrl, window.location.origin)
+      url.searchParams.set('formatId', formatId)
+      router.push(url.pathname + url.search)
+    } else {
+      setViewMode('list')
+      setSelectedFormatId(null)
+    }
   }
 
   const handleCancel = () => {
-    setViewMode('list')
-    setSelectedFormatId(null)
+    // リターンURLが設定されている場合は、そこに戻る
+    if (returnUrl) {
+      router.push(returnUrl)
+    } else {
+      setViewMode('list')
+      setSelectedFormatId(null)
+    }
   }
 
   const handleDelete = () => {
@@ -87,5 +117,13 @@ export default function AccountFormatsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function AccountFormatsPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto py-8 px-4 text-center">読み込み中...</div>}>
+      <AccountFormatsPageContent />
+    </Suspense>
   )
 }

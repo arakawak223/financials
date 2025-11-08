@@ -185,7 +185,7 @@ export function AccountFormatEditor({
               {formatId ? 'テンプレート編集' : '新規テンプレート作成'}
             </CardTitle>
             <CardDescription>
-              売上高・売上原価・売上総利益の科目体系を設定します
+              売上高/売上原価/売上総利益/販売費・一般管理費/営業外損益/特別損益の科目体系を設定します
             </CardDescription>
           </div>
           {onCancel && (
@@ -258,6 +258,9 @@ export function AccountFormatEditor({
               科目を追加
             </Button>
           </div>
+          <p className="text-sm text-muted-foreground">
+            ただし、追加設定する科目名には、決算書の内訳科目で使用されている科目と同じ科目を入力してください。
+          </p>
 
           {items.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
@@ -291,9 +294,10 @@ export function AccountFormatEditor({
                           <SelectContent>
                             <SelectItem value="売上高">売上高</SelectItem>
                             <SelectItem value="売上原価">売上原価</SelectItem>
-                            <SelectItem value="売上総利益">
-                              売上総利益
-                            </SelectItem>
+                            <SelectItem value="売上総利益">売上総利益</SelectItem>
+                            <SelectItem value="販売費・一般管理費">販売費・一般管理費</SelectItem>
+                            <SelectItem value="営業外損益">営業外損益</SelectItem>
+                            <SelectItem value="特別損益">特別損益</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>

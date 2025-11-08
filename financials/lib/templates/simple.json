@@ -1,5 +1,5 @@
 {
-  "name": "基本テンプレート",
+  "name": "テンプレート",
   "description": "内訳科目なしの基本テンプレート。ユーザーが自由に科目を追加できます",
   "industry_name": "汎用",
   "is_shared": true,

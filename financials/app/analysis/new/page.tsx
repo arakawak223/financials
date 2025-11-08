@@ -341,39 +341,63 @@ function NewAnalysisPageContent() {
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold">科目テンプレート選択</h2>
             <p className="text-gray-600">
-              売上高・売上原価の科目体系テンプレートを選択してください。業種に応じたテンプレートが自動選択されています。
+              売上高/売上原価/売上総利益/販売費・一般管理費/営業外損益/特別損益の内訳科目を抽出・表示する科目体系テンプレートを使用するかどうかを選択します。
             </p>
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="format">科目体系テンプレート</Label>
-                <Select value={formatId || '__none__'} onValueChange={(value) => setFormatId(value === '__none__' ? '' : value)}>
+                <Label htmlFor="useTemplate">科目体系テンプレート</Label>
+                <Select
+                  value={formatId ? 'use' : 'none'}
+                  onValueChange={async (value) => {
+                    if (value === 'none') {
+                      setFormatId('')
+                    } else if (value === 'use') {
+                      // 「使用する」を選択したら、テンプレートを適用してフォーマットを作成
+                      try {
+                        // simple テンプレートを適用
+                        const response = await fetch('/api/account-formats/templates/simple/apply', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                        })
+
+                        if (response.ok) {
+                          const data = await response.json()
+                          const createdFormatId = data.format.id
+
+                          // 作成されたフォーマットの編集画面に遷移
+                          const returnUrl = encodeURIComponent(window.location.pathname + window.location.search)
+                          router.push(`/account-formats?edit=${createdFormatId}&return=${returnUrl}`)
+                        } else {
+                          alert('テンプレートの適用に失敗しました')
+                        }
+                      } catch (error) {
+                        console.error('テンプレート適用エラー:', error)
+                        alert('テンプレートの適用中にエラーが発生しました')
+                      }
+                    }
+                  }}
+                >
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="テンプレートを選択" />
+                    <SelectValue placeholder="選択してください" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">使用しない</SelectItem>
-                    {formats.map((format) => (
-                      <SelectItem key={format.id} value={format.id}>
-                        {format.name}
-                        {format.description ? ` - ${format.description}` : ''}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="none">使用しない</SelectItem>
+                    <SelectItem value="use">使用する</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500 mt-2">
-                  科目体系テンプレートを使用すると、売上高・売上原価の詳細入力が簡単になります。
-                  テンプレートは後から<a href="/account-formats" className="text-blue-600 underline" target="_blank">科目テンプレート管理画面</a>でカスタマイズできます。
+                  「使用する」を選択すると、科目テンプレート画面で内訳科目をカスタマイズできます。
                 </p>
               </div>
 
               {formatId && (
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
                   <p className="text-sm text-blue-800 font-semibold mb-2">
-                    選択中のテンプレート
+                    テンプレート設定済み
                   </p>
                   <p className="text-sm text-blue-800">
-                    {formats.find((f) => f.id === formatId)?.name || ''}
+                    {formats.find((f) => f.id === formatId)?.name || 'テンプレート'}
                   </p>
                   {formats.find((f) => f.id === formatId)?.description && (
                     <p className="text-xs text-blue-700 mt-1">
