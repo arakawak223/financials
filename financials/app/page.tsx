@@ -17,7 +17,10 @@ export default function Home() {
               財務分析アプリ
             </Link>
             <Link href="/analysis" className="text-sm hover:underline">
-              分析一覧
+              決算分析
+            </Link>
+            <Link href="/budget-vs-actual" className="text-sm hover:underline">
+              予算実績分析
             </Link>
             <Link href="/companies" className="text-sm hover:underline">
               企業管理
@@ -51,6 +54,83 @@ export default function Home() {
                 新規財務分析を開始
               </Button>
             </Link>
+          </div>
+
+          {/* 主要機能カテゴリー */}
+          <div className="grid md:grid-cols-2 gap-8 mb-12">
+            {/* 実績分析機能 */}
+            <Card className="p-8 border-2 hover:border-primary transition-colors">
+              <div className="mb-6">
+                <BarChart3 className="h-12 w-12 text-primary mb-3" />
+                <h2 className="text-2xl font-bold mb-2">実績分析機能</h2>
+                <p className="text-gray-600">
+                  過去の財務データを多角的に分析し、企業の実態を把握
+                </p>
+              </div>
+              <div className="space-y-4">
+                <Link href="/analysis/new">
+                  <div className="p-4 border rounded-lg hover:bg-accent transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-6 w-6 text-primary" />
+                      <div>
+                        <h3 className="font-semibold">決算分析</h3>
+                        <p className="text-sm text-gray-600">
+                          時系列での財務推移分析とAIコメント生成
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+                <Link href="/budget-vs-actual">
+                  <div className="p-4 border rounded-lg hover:bg-accent transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <TrendingUp className="h-6 w-6 text-primary" />
+                      <div>
+                        <h3 className="font-semibold">予算実績分析</h3>
+                        <p className="text-sm text-gray-600">
+                          予算と実績の差異分析と達成率モニタリング
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+                <div className="p-4 border rounded-lg bg-gray-50 opacity-60">
+                  <div className="flex items-center gap-3">
+                    <BarChart3 className="h-6 w-6 text-gray-400" />
+                    <div>
+                      <h3 className="font-semibold text-gray-500">企業間比較分析</h3>
+                      <p className="text-sm text-gray-500">
+                        複数企業の財務指標を比較（開発予定）
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* 計画策定機能 */}
+            <Card className="p-8 border-2 hover:border-primary transition-colors">
+              <div className="mb-6">
+                <TrendingUp className="h-12 w-12 text-primary mb-3" />
+                <h2 className="text-2xl font-bold mb-2">計画策定機能</h2>
+                <p className="text-gray-600">
+                  過去実績を基に将来の事業計画を策定・シミュレーション
+                </p>
+              </div>
+              <div className="space-y-4">
+                <div className="p-4 border rounded-lg bg-gray-50 opacity-60">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-6 w-6 text-gray-400" />
+                    <div>
+                      <h3 className="font-semibold text-gray-500">事業計画策定</h3>
+                      <p className="text-sm text-gray-500">
+                        5年間の財務予測とシナリオ分析（開発予定）
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
 
           {/* 機能紹介 */}
