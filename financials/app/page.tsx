@@ -2,7 +2,7 @@ import { AuthButton } from "@/components/auth-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { hasEnvVars } from "@/lib/utils";
 import Link from "next/link";
-import { Plus, BarChart3, FileText, TrendingUp } from "lucide-react";
+import { Plus, BarChart3, FileText, TrendingUp, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -21,6 +21,9 @@ export default function Home() {
             </Link>
             <Link href="/budget-vs-actual" className="text-sm hover:underline">
               予算実績分析
+            </Link>
+            <Link href="/company-comparison" className="text-sm hover:underline">
+              企業間比較
             </Link>
             <Link href="/companies" className="text-sm hover:underline">
               企業管理
@@ -94,17 +97,19 @@ export default function Home() {
                     </div>
                   </div>
                 </Link>
-                <div className="p-4 border rounded-lg bg-gray-50 opacity-60">
-                  <div className="flex items-center gap-3">
-                    <BarChart3 className="h-6 w-6 text-gray-400" />
-                    <div>
-                      <h3 className="font-semibold text-gray-500">企業間比較分析</h3>
-                      <p className="text-sm text-gray-500">
-                        複数企業の財務指標を比較（開発予定）
-                      </p>
+                <Link href="/company-comparison">
+                  <div className="p-4 border rounded-lg hover:bg-accent transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <Building2 className="h-6 w-6 text-primary" />
+                      <div>
+                        <h3 className="font-semibold">企業間比較分析</h3>
+                        <p className="text-sm text-gray-600">
+                          複数企業の財務指標を比較・ベンチマーク
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               </div>
             </Card>
 
