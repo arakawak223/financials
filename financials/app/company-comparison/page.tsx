@@ -19,8 +19,19 @@ import {
   TrendingDown,
   RefreshCw,
   Building2,
+  BarChart3,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts'
 
 interface Company {
   id: string
@@ -83,6 +94,10 @@ export default function CompanyComparisonPage() {
   const [industryBenchmarks, setIndustryBenchmarks] = useState<Map<string, IndustryBenchmark>>(new Map())
   const [companyRankings, setCompanyRankings] = useState<Map<string, CompanyRanking[]>>(new Map())
   const [showBenchmark, setShowBenchmark] = useState(true)
+  const [viewMode, setViewMode] = useState<'single' | 'timeseries'>('single')
+  const [startYear, setStartYear] = useState<number | null>(null)
+  const [endYear, setEndYear] = useState<number | null>(null)
+  const [timeseriesData, setTimeseriesData] = useState<Map<string, ComparisonData[]>>(new Map())
 
   useEffect(() => {
     loadCompanies()
@@ -90,10 +105,25 @@ export default function CompanyComparisonPage() {
   }, [])
 
   useEffect(() => {
-    if (selectedCompanyIds.length > 0 && selectedFiscalYear) {
+    if (selectedCompanyIds.length > 0 && selectedFiscalYear && viewMode === 'single') {
       loadComparisonData()
     }
-  }, [selectedCompanyIds, selectedFiscalYear])
+  }, [selectedCompanyIds, selectedFiscalYear, viewMode])
+
+  useEffect(() => {
+    if (selectedCompanyIds.length > 0 && startYear && endYear && viewMode === 'timeseries') {
+      loadTimeseriesData()
+    }
+  }, [selectedCompanyIds, startYear, endYear, viewMode])
+
+  useEffect(() => {
+    // Initialize start and end years when fiscal years are loaded
+    if (fiscalYears.length > 0 && !startYear && !endYear) {
+      const latest = fiscalYears[0]
+      setEndYear(latest)
+      setStartYear(Math.max(latest - 4, fiscalYears[fiscalYears.length - 1]))
+    }
+  }, [fiscalYears])
 
   const loadCompanies = async () => {
     try {
@@ -316,6 +346,44 @@ export default function CompanyComparisonPage() {
       : validValues[mid]
   }
 
+  const loadTimeseriesData = async () => {
+    if (!startYear || !endYear || selectedCompanyIds.length === 0) return
+
+    setLoading(true)
+    try {
+      const supabase = createClient()
+      const dataMap = new Map<string, ComparisonData[]>()
+
+      // Generate array of years in range
+      const years = []
+      for (let year = startYear; year <= endYear; year++) {
+        years.push(year)
+      }
+
+      // Fetch data for each company across all years
+      for (const companyId of selectedCompanyIds) {
+        const { data, error } = await supabase
+          .from('company_financial_summary')
+          .select('*')
+          .eq('company_id', companyId)
+          .in('fiscal_year', years)
+          .order('fiscal_year', { ascending: true })
+
+        if (error) throw error
+
+        if (data && data.length > 0) {
+          dataMap.set(companyId, data)
+        }
+      }
+
+      setTimeseriesData(dataMap)
+    } catch (error) {
+      console.error('時系列データ読み込みエラー:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const toggleCompanySelection = (companyId: string) => {
     setSelectedCompanyIds((prev) =>
       prev.includes(companyId)
@@ -430,32 +498,111 @@ export default function CompanyComparisonPage() {
 
         {/* Controls */}
         <Card className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Fiscal Year Selection */}
-            <div>
-              <label className="block text-sm font-medium mb-2">会計年度</label>
-              <Select
-                value={selectedFiscalYear?.toString() || ''}
-                onValueChange={(value) => setSelectedFiscalYear(Number(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="会計年度を選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fiscalYears.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}年度
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* View Mode Selection */}
+          <div>
+            <label className="block text-sm font-medium mb-2">表示モード</label>
+            <div className="flex gap-4">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="viewMode"
+                  value="single"
+                  checked={viewMode === 'single'}
+                  onChange={() => setViewMode('single')}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">単年度比較</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="viewMode"
+                  value="timeseries"
+                  checked={viewMode === 'timeseries'}
+                  onChange={() => setViewMode('timeseries')}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm">時系列比較</span>
+              </label>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Single Year or Year Range Selection */}
+            {viewMode === 'single' ? (
+              <div>
+                <label className="block text-sm font-medium mb-2">会計年度</label>
+                <Select
+                  value={selectedFiscalYear?.toString() || ''}
+                  onValueChange={(value) => setSelectedFiscalYear(Number(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="会計年度を選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fiscalYears.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}年度
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2">開始年度</label>
+                  <Select
+                    value={startYear?.toString() || ''}
+                    onValueChange={(value) => setStartYear(Number(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="開始年度を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fiscalYears.map((year) => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}年度
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">終了年度</label>
+                  <Select
+                    value={endYear?.toString() || ''}
+                    onValueChange={(value) => setEndYear(Number(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="終了年度を選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fiscalYears.map((year) => (
+                        <SelectItem
+                          key={year}
+                          value={year.toString()}
+                          disabled={startYear ? year < startYear : false}
+                        >
+                          {year}年度
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
 
             {/* Action Buttons */}
             <div className="flex items-end gap-2">
               <Button
-                onClick={loadComparisonData}
-                disabled={loading || selectedCompanyIds.length === 0}
+                onClick={viewMode === 'single' ? loadComparisonData : loadTimeseriesData}
+                disabled={
+                  loading ||
+                  selectedCompanyIds.length === 0 ||
+                  (viewMode === 'single' && !selectedFiscalYear) ||
+                  (viewMode === 'timeseries' && (!startYear || !endYear))
+                }
                 className="flex-1"
               >
                 {loading ? (
@@ -472,7 +619,10 @@ export default function CompanyComparisonPage() {
               </Button>
               <Button
                 onClick={exportToCSV}
-                disabled={comparisonData.length === 0}
+                disabled={
+                  (viewMode === 'single' && comparisonData.length === 0) ||
+                  (viewMode === 'timeseries' && timeseriesData.size === 0)
+                }
                 variant="outline"
               >
                 <Download className="w-4 h-4 mr-2" />
@@ -534,8 +684,8 @@ export default function CompanyComparisonPage() {
           </div>
         </Card>
 
-        {/* Comparison Table */}
-        {comparisonData.length > 0 && (
+        {/* Single Year Comparison Table */}
+        {viewMode === 'single' && comparisonData.length > 0 && (
           <Card className="p-6">
             <h2 className="text-xl font-bold mb-4">比較結果</h2>
             <div className="overflow-x-auto">
@@ -674,6 +824,279 @@ export default function CompanyComparisonPage() {
           </Card>
         )}
 
+        {/* Timeseries Comparison */}
+        {viewMode === 'timeseries' && timeseriesData.size > 0 && (
+          <Card className="p-6">
+            <h2 className="text-xl font-bold mb-4">時系列比較結果</h2>
+            {Array.from(timeseriesData.entries()).map(([companyId, data]) => {
+              const companyName = data[0]?.company_name || '不明'
+
+              return (
+                <div key={companyId} className="mb-8 last:mb-0">
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Building2 className="w-5 h-5" />
+                    {companyName}
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm border">
+                      <thead>
+                        <tr className="bg-gray-100 border-b">
+                          <th className="text-left p-2 font-medium border-r">指標</th>
+                          {data.map((yearData) => (
+                            <th key={yearData.fiscal_year} className="text-right p-2 font-medium">
+                              {yearData.fiscal_year}年度
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b hover:bg-gray-50">
+                          <td className="p-2 font-medium border-r">売上高</td>
+                          {data.map((yearData) => (
+                            <td key={yearData.fiscal_year} className="p-2 text-right">
+                              {formatCurrency(yearData.net_sales)}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr className="border-b hover:bg-gray-50 bg-blue-50">
+                          <td className="p-2 text-sm text-gray-600 border-r pl-6">└ 成長率</td>
+                          {data.map((yearData, index) => {
+                            const prevSales = index > 0 ? data[index - 1]?.net_sales : null
+                            return (
+                              <td key={yearData.fiscal_year} className="p-2 text-right text-sm">
+                                {index > 0 && yearData.net_sales && prevSales
+                                  ? formatGrowth(((yearData.net_sales - prevSales) / prevSales) * 100)
+                                  : '-'}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                        <tr className="border-b hover:bg-gray-50">
+                          <td className="p-2 font-medium border-r">営業利益</td>
+                          {data.map((yearData) => (
+                            <td key={yearData.fiscal_year} className="p-2 text-right">
+                              {formatCurrency(yearData.operating_income)}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr className="border-b hover:bg-gray-50 bg-blue-50">
+                          <td className="p-2 text-sm text-gray-600 border-r pl-6">└ 成長率</td>
+                          {data.map((yearData, index) => {
+                            const prevIncome = index > 0 ? data[index - 1]?.operating_income : null
+                            return (
+                              <td key={yearData.fiscal_year} className="p-2 text-right text-sm">
+                                {index > 0 && yearData.operating_income && prevIncome
+                                  ? formatGrowth(((yearData.operating_income - prevIncome) / prevIncome) * 100)
+                                  : '-'}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                        <tr className="border-b hover:bg-gray-50">
+                          <td className="p-2 font-medium border-r">当期純利益</td>
+                          {data.map((yearData) => (
+                            <td key={yearData.fiscal_year} className="p-2 text-right">
+                              {formatCurrency(yearData.net_income)}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr className="border-b hover:bg-gray-50">
+                          <td className="p-2 font-medium border-r">ROE</td>
+                          {data.map((yearData) => (
+                            <td key={yearData.fiscal_year} className="p-2 text-right">
+                              {formatPercent(yearData.roe)}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr className="border-b hover:bg-gray-50">
+                          <td className="p-2 font-medium border-r">ROA</td>
+                          {data.map((yearData) => (
+                            <td key={yearData.fiscal_year} className="p-2 text-right">
+                              {formatPercent(yearData.roa)}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr className="border-b hover:bg-gray-50">
+                          <td className="p-2 font-medium border-r">営業利益率</td>
+                          {data.map((yearData) => (
+                            <td key={yearData.fiscal_year} className="p-2 text-right">
+                              {formatPercent(yearData.operating_margin)}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr className="border-b hover:bg-gray-50">
+                          <td className="p-2 font-medium border-r">EBITDA</td>
+                          {data.map((yearData) => (
+                            <td key={yearData.fiscal_year} className="p-2 text-right">
+                              {formatCurrency(yearData.ebitda)}
+                            </td>
+                          ))}
+                        </tr>
+                        <tr className="hover:bg-gray-50">
+                          <td className="p-2 font-medium border-r">FCF</td>
+                          {data.map((yearData) => (
+                            <td key={yearData.fiscal_year} className="p-2 text-right">
+                              {formatCurrency(yearData.fcf)}
+                            </td>
+                          ))}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Charts */}
+                  <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Sales Chart */}
+                    <Card className="p-4">
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4" />
+                        売上高推移
+                      </h4>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <LineChart data={data}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="fiscal_year"
+                            tick={{ fontSize: 12 }}
+                            label={{ value: '年度', position: 'insideBottom', offset: -5 }}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 12 }}
+                            tickFormatter={(value) => `¥${(value / 100000000).toFixed(0)}億`}
+                          />
+                          <Tooltip
+                            formatter={(value: number) => formatCurrency(value)}
+                            labelFormatter={(label) => `${label}年度`}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="net_sales"
+                            stroke="#3b82f6"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                            name="売上高"
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </Card>
+
+                    {/* Operating Income Chart */}
+                    <Card className="p-4">
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4" />
+                        営業利益推移
+                      </h4>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <LineChart data={data}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="fiscal_year"
+                            tick={{ fontSize: 12 }}
+                            label={{ value: '年度', position: 'insideBottom', offset: -5 }}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 12 }}
+                            tickFormatter={(value) => `¥${(value / 100000000).toFixed(0)}億`}
+                          />
+                          <Tooltip
+                            formatter={(value: number) => formatCurrency(value)}
+                            labelFormatter={(label) => `${label}年度`}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="operating_income"
+                            stroke="#10b981"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                            name="営業利益"
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </Card>
+
+                    {/* ROE/ROA Chart */}
+                    <Card className="p-4">
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4" />
+                        ROE/ROA推移
+                      </h4>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <LineChart data={data}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="fiscal_year"
+                            tick={{ fontSize: 12 }}
+                            label={{ value: '年度', position: 'insideBottom', offset: -5 }}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 12 }}
+                            tickFormatter={(value) => `${value.toFixed(1)}%`}
+                          />
+                          <Tooltip
+                            formatter={(value: number) => `${value.toFixed(2)}%`}
+                            labelFormatter={(label) => `${label}年度`}
+                          />
+                          <Legend />
+                          <Line
+                            type="monotone"
+                            dataKey="roe"
+                            stroke="#8b5cf6"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                            name="ROE"
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="roa"
+                            stroke="#f59e0b"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                            name="ROA"
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </Card>
+
+                    {/* Operating Margin Chart */}
+                    <Card className="p-4">
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4" />
+                        営業利益率推移
+                      </h4>
+                      <ResponsiveContainer width="100%" height={200}>
+                        <LineChart data={data}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="fiscal_year"
+                            tick={{ fontSize: 12 }}
+                            label={{ value: '年度', position: 'insideBottom', offset: -5 }}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 12 }}
+                            tickFormatter={(value) => `${value.toFixed(1)}%`}
+                          />
+                          <Tooltip
+                            formatter={(value: number) => `${value.toFixed(2)}%`}
+                            labelFormatter={(label) => `${label}年度`}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="operating_margin"
+                            stroke="#ef4444"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                            name="営業利益率"
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </Card>
+                  </div>
+                </div>
+              )
+            })}
+          </Card>
+        )}
+
         {/* Empty State */}
         {selectedCompanyIds.length === 0 && (
           <Card className="p-12 text-center">
@@ -687,17 +1110,35 @@ export default function CompanyComparisonPage() {
           </Card>
         )}
 
-        {selectedCompanyIds.length > 0 && comparisonData.length === 0 && !loading && (
-          <Card className="p-12 text-center">
-            <RefreshCw className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              データがありません
-            </h3>
-            <p className="text-gray-600">
-              選択した企業の{selectedFiscalYear}年度のデータが見つかりませんでした。
-            </p>
-          </Card>
-        )}
+        {selectedCompanyIds.length > 0 &&
+          viewMode === 'single' &&
+          comparisonData.length === 0 &&
+          !loading && (
+            <Card className="p-12 text-center">
+              <RefreshCw className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                データがありません
+              </h3>
+              <p className="text-gray-600">
+                選択した企業の{selectedFiscalYear}年度のデータが見つかりませんでした。
+              </p>
+            </Card>
+          )}
+
+        {selectedCompanyIds.length > 0 &&
+          viewMode === 'timeseries' &&
+          timeseriesData.size === 0 &&
+          !loading && (
+            <Card className="p-12 text-center">
+              <RefreshCw className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                データがありません
+              </h3>
+              <p className="text-gray-600">
+                選択した企業の{startYear}年度〜{endYear}年度のデータが見つかりませんでした。
+              </p>
+            </Card>
+          )}
       </div>
     </div>
   )
