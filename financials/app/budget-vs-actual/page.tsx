@@ -239,10 +239,15 @@ export default function BudgetVsActualPage() {
                 <SelectContent>
                   {periods.map((period) => (
                     <SelectItem key={period.id} value={period.id}>
-                      {period.fiscal_year}年度 (
-                      {new Date(period.period_start).toLocaleDateString('ja-JP')}{' '}
-                      ~ {new Date(period.period_end).toLocaleDateString('ja-JP')}
-                      )
+                      {period.fiscal_year}年度
+                      {period.period_start_date && period.period_end_date && (
+                        <>
+                          {' '}(
+                          {new Date(period.period_start_date).toLocaleDateString('ja-JP')}{' '}
+                          ~ {new Date(period.period_end_date).toLocaleDateString('ja-JP')}
+                          )
+                        </>
+                      )}
                     </SelectItem>
                   ))}
                 </SelectContent>

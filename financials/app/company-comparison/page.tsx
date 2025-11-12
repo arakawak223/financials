@@ -46,6 +46,32 @@ interface ComparisonData {
   ebitda_growth: number | null
 }
 
+interface IndustryBenchmark {
+  industry: string
+  company_count: number
+  avg_net_sales: number | null
+  avg_operating_income: number | null
+  avg_net_income: number | null
+  avg_roe: number | null
+  avg_roa: number | null
+  avg_operating_margin: number | null
+  avg_ebitda: number | null
+  avg_fcf: number | null
+  avg_sales_growth: number | null
+  median_net_sales: number | null
+  median_roe: number | null
+  median_roa: number | null
+  median_operating_margin: number | null
+}
+
+interface CompanyRanking {
+  company_id: string
+  metric: string
+  rank: number
+  percentile: number
+  total_companies: number
+}
+
 export default function CompanyComparisonPage() {
   const router = useRouter()
   const [companies, setCompanies] = useState<Company[]>([])
@@ -54,6 +80,9 @@ export default function CompanyComparisonPage() {
   const [selectedFiscalYear, setSelectedFiscalYear] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [comparisonData, setComparisonData] = useState<ComparisonData[]>([])
+  const [industryBenchmarks, setIndustryBenchmarks] = useState<Map<string, IndustryBenchmark>>(new Map())
+  const [companyRankings, setCompanyRankings] = useState<Map<string, CompanyRanking[]>>(new Map())
+  const [showBenchmark, setShowBenchmark] = useState(true)
 
   useEffect(() => {
     loadCompanies()
@@ -150,11 +179,141 @@ export default function CompanyComparisonPage() {
       if (error) throw error
 
       setComparisonData(data || [])
+
+      // Load industry benchmarks and rankings for selected companies
+      if (data && data.length > 0) {
+        await loadIndustryBenchmarks(data)
+        await loadCompanyRankings(data)
+      }
     } catch (error) {
       console.error('比較データ読み込みエラー:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadIndustryBenchmarks = async (companyData: ComparisonData[]) => {
+    if (!selectedFiscalYear) return
+
+    try {
+      const supabase = createClient()
+      const industries = Array.from(new Set(companyData.map(d => d.industry).filter(Boolean)))
+      const benchmarkMap = new Map<string, IndustryBenchmark>()
+
+      for (const industry of industries) {
+        if (!industry) continue
+
+        // Get all companies in the same industry
+        const { data: industryData, error } = await supabase
+          .from('company_financial_summary')
+          .select('*')
+          .eq('industry', industry)
+          .eq('fiscal_year', selectedFiscalYear)
+
+        if (error) throw error
+        if (!industryData || industryData.length === 0) continue
+
+        // Calculate averages and medians
+        const benchmark: IndustryBenchmark = {
+          industry,
+          company_count: industryData.length,
+          avg_net_sales: calculateAverage(industryData.map(d => d.net_sales)),
+          avg_operating_income: calculateAverage(industryData.map(d => d.operating_income)),
+          avg_net_income: calculateAverage(industryData.map(d => d.net_income)),
+          avg_roe: calculateAverage(industryData.map(d => d.roe)),
+          avg_roa: calculateAverage(industryData.map(d => d.roa)),
+          avg_operating_margin: calculateAverage(industryData.map(d => d.operating_margin)),
+          avg_ebitda: calculateAverage(industryData.map(d => d.ebitda)),
+          avg_fcf: calculateAverage(industryData.map(d => d.fcf)),
+          avg_sales_growth: calculateAverage(industryData.map(d => d.sales_growth)),
+          median_net_sales: calculateMedian(industryData.map(d => d.net_sales)),
+          median_roe: calculateMedian(industryData.map(d => d.roe)),
+          median_roa: calculateMedian(industryData.map(d => d.roa)),
+          median_operating_margin: calculateMedian(industryData.map(d => d.operating_margin)),
+        }
+
+        benchmarkMap.set(industry, benchmark)
+      }
+
+      setIndustryBenchmarks(benchmarkMap)
+    } catch (error) {
+      console.error('業種ベンチマーク読み込みエラー:', error)
+    }
+  }
+
+  const loadCompanyRankings = async (companyData: ComparisonData[]) => {
+    if (!selectedFiscalYear) return
+
+    try {
+      const supabase = createClient()
+      const rankingMap = new Map<string, CompanyRanking[]>()
+
+      for (const company of companyData) {
+        if (!company.industry) continue
+
+        // Get all companies in the same industry
+        const { data: industryData, error } = await supabase
+          .from('company_financial_summary')
+          .select('*')
+          .eq('industry', company.industry)
+          .eq('fiscal_year', selectedFiscalYear)
+
+        if (error) throw error
+        if (!industryData || industryData.length === 0) continue
+
+        const rankings: CompanyRanking[] = []
+        const metrics = [
+          { key: 'net_sales', name: '売上高' },
+          { key: 'operating_income', name: '営業利益' },
+          { key: 'roe', name: 'ROE' },
+          { key: 'roa', name: 'ROA' },
+          { key: 'operating_margin', name: '営業利益率' },
+        ]
+
+        for (const metric of metrics) {
+          const sortedData = industryData
+            .filter(d => d[metric.key as keyof ComparisonData] !== null)
+            .sort((a, b) => {
+              const aVal = a[metric.key as keyof ComparisonData] as number
+              const bVal = b[metric.key as keyof ComparisonData] as number
+              return bVal - aVal // Descending order
+            })
+
+          const rank = sortedData.findIndex(d => d.company_id === company.company_id) + 1
+          if (rank > 0) {
+            const percentile = ((sortedData.length - rank + 1) / sortedData.length) * 100
+            rankings.push({
+              company_id: company.company_id,
+              metric: metric.name,
+              rank,
+              percentile: Math.round(percentile),
+              total_companies: sortedData.length,
+            })
+          }
+        }
+
+        rankingMap.set(company.company_id, rankings)
+      }
+
+      setCompanyRankings(rankingMap)
+    } catch (error) {
+      console.error('企業ランキング読み込みエラー:', error)
+    }
+  }
+
+  const calculateAverage = (values: (number | null)[]): number | null => {
+    const validValues = values.filter((v): v is number => v !== null && !isNaN(v))
+    if (validValues.length === 0) return null
+    return validValues.reduce((sum, v) => sum + v, 0) / validValues.length
+  }
+
+  const calculateMedian = (values: (number | null)[]): number | null => {
+    const validValues = values.filter((v): v is number => v !== null && !isNaN(v)).sort((a, b) => a - b)
+    if (validValues.length === 0) return null
+    const mid = Math.floor(validValues.length / 2)
+    return validValues.length % 2 === 0
+      ? (validValues[mid - 1] + validValues[mid]) / 2
+      : validValues[mid]
   }
 
   const toggleCompanySelection = (companyId: string) => {
@@ -322,6 +481,23 @@ export default function CompanyComparisonPage() {
             </div>
           </div>
 
+          {/* Benchmark Toggle */}
+          {comparisonData.length > 0 && (
+            <div className="flex items-center space-x-2 pt-2 border-t">
+              <Checkbox
+                id="showBenchmark"
+                checked={showBenchmark}
+                onCheckedChange={(checked) => setShowBenchmark(checked as boolean)}
+              />
+              <label
+                htmlFor="showBenchmark"
+                className="text-sm font-medium cursor-pointer"
+              >
+                業種平均とベンチマークを表示
+              </label>
+            </div>
+          )}
+
           {/* Company Selection */}
           <div>
             <label className="block text-sm font-medium mb-2">
@@ -380,39 +556,118 @@ export default function CompanyComparisonPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {comparisonData.map((data) => (
-                    <tr key={data.company_id} className="border-b hover:bg-gray-50">
-                      <td className="p-2 font-medium">{data.company_name}</td>
-                      <td className="p-2 text-gray-600">{data.industry || '-'}</td>
-                      <td className="p-2 text-right">
-                        {formatCurrency(data.net_sales)}
-                      </td>
-                      <td className="p-2 text-right">
-                        {formatCurrency(data.operating_income)}
-                      </td>
-                      <td className="p-2 text-right">
-                        {formatCurrency(data.net_income)}
-                      </td>
-                      <td className="p-2 text-right">
-                        {formatPercent(data.roe)}
-                      </td>
-                      <td className="p-2 text-right">
-                        {formatPercent(data.roa)}
-                      </td>
-                      <td className="p-2 text-right">
-                        {formatPercent(data.operating_margin)}
-                      </td>
-                      <td className="p-2 text-right">
-                        {formatCurrency(data.ebitda)}
-                      </td>
-                      <td className="p-2 text-right">
-                        {formatCurrency(data.fcf)}
-                      </td>
-                      <td className="p-2 text-right">
-                        {formatGrowth(data.sales_growth)}
-                      </td>
-                    </tr>
-                  ))}
+                  {comparisonData.map((data) => {
+                    const rankings = companyRankings.get(data.company_id)
+                    const benchmark = data.industry ? industryBenchmarks.get(data.industry) : null
+
+                    return (
+                      <>
+                        <tr key={data.company_id} className="border-b hover:bg-gray-50">
+                          <td className="p-2 font-medium">{data.company_name}</td>
+                          <td className="p-2 text-gray-600">{data.industry || '-'}</td>
+                          <td className="p-2 text-right">
+                            {formatCurrency(data.net_sales)}
+                            {showBenchmark && rankings && (
+                              <div className="text-xs text-blue-600 mt-1">
+                                {rankings.find(r => r.metric === '売上高')?.rank || '-'}位
+                                (上位{rankings.find(r => r.metric === '売上高')?.percentile || '-'}%)
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-2 text-right">
+                            {formatCurrency(data.operating_income)}
+                            {showBenchmark && rankings && (
+                              <div className="text-xs text-blue-600 mt-1">
+                                {rankings.find(r => r.metric === '営業利益')?.rank || '-'}位
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-2 text-right">
+                            {formatCurrency(data.net_income)}
+                          </td>
+                          <td className="p-2 text-right">
+                            {formatPercent(data.roe)}
+                            {showBenchmark && rankings && (
+                              <div className="text-xs text-blue-600 mt-1">
+                                {rankings.find(r => r.metric === 'ROE')?.rank || '-'}位
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-2 text-right">
+                            {formatPercent(data.roa)}
+                            {showBenchmark && rankings && (
+                              <div className="text-xs text-blue-600 mt-1">
+                                {rankings.find(r => r.metric === 'ROA')?.rank || '-'}位
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-2 text-right">
+                            {formatPercent(data.operating_margin)}
+                            {showBenchmark && rankings && (
+                              <div className="text-xs text-blue-600 mt-1">
+                                {rankings.find(r => r.metric === '営業利益率')?.rank || '-'}位
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-2 text-right">
+                            {formatCurrency(data.ebitda)}
+                          </td>
+                          <td className="p-2 text-right">
+                            {formatCurrency(data.fcf)}
+                          </td>
+                          <td className="p-2 text-right">
+                            {formatGrowth(data.sales_growth)}
+                          </td>
+                        </tr>
+                        {showBenchmark && benchmark && (
+                          <tr key={`${data.company_id}-benchmark`} className="bg-blue-50 border-b text-xs">
+                            <td className="p-2 pl-6 text-blue-700" colSpan={2}>
+                              └ {data.industry} 平均 (n={benchmark.company_count})
+                            </td>
+                            <td className="p-2 text-right text-blue-700">
+                              {formatCurrency(benchmark.avg_net_sales)}
+                              <div className="text-xs text-gray-500 mt-1">
+                                中央値: {formatCurrency(benchmark.median_net_sales)}
+                              </div>
+                            </td>
+                            <td className="p-2 text-right text-blue-700">
+                              {formatCurrency(benchmark.avg_operating_income)}
+                            </td>
+                            <td className="p-2 text-right text-blue-700">
+                              {formatCurrency(benchmark.avg_net_income)}
+                            </td>
+                            <td className="p-2 text-right text-blue-700">
+                              {formatPercent(benchmark.avg_roe)}
+                              <div className="text-xs text-gray-500 mt-1">
+                                中央値: {formatPercent(benchmark.median_roe)}
+                              </div>
+                            </td>
+                            <td className="p-2 text-right text-blue-700">
+                              {formatPercent(benchmark.avg_roa)}
+                              <div className="text-xs text-gray-500 mt-1">
+                                中央値: {formatPercent(benchmark.median_roa)}
+                              </div>
+                            </td>
+                            <td className="p-2 text-right text-blue-700">
+                              {formatPercent(benchmark.avg_operating_margin)}
+                              <div className="text-xs text-gray-500 mt-1">
+                                中央値: {formatPercent(benchmark.median_operating_margin)}
+                              </div>
+                            </td>
+                            <td className="p-2 text-right text-blue-700">
+                              {formatCurrency(benchmark.avg_ebitda)}
+                            </td>
+                            <td className="p-2 text-right text-blue-700">
+                              {formatCurrency(benchmark.avg_fcf)}
+                            </td>
+                            <td className="p-2 text-right text-blue-700">
+                              {formatPercent(benchmark.avg_sales_growth)}
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
