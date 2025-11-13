@@ -422,7 +422,21 @@ export default function CompanyComparisonPage() {
   }
 
   const exportToCSV = () => {
-    if (comparisonData.length === 0) return
+    // Determine which data to export based on view mode
+    let dataToExport: ComparisonData[] = []
+
+    if (viewMode === 'single') {
+      if (comparisonData.length === 0) return
+      dataToExport = comparisonData
+    } else if (viewMode === 'timeseries') {
+      if (timeseriesData.size === 0) return
+      // Flatten timeseries data into a single array
+      for (const [_, companyData] of timeseriesData) {
+        dataToExport.push(...companyData)
+      }
+    }
+
+    if (dataToExport.length === 0) return
 
     // Add BOM for proper Japanese character encoding in Excel
     const BOM = '\uFEFF'
@@ -444,7 +458,7 @@ export default function CompanyComparisonPage() {
       'EBITDA成長率',
     ]
 
-    const rows = comparisonData.map((d) => [
+    const rows = dataToExport.map((d) => [
       d.company_name,
       d.industry || '',
       d.fiscal_year.toString(),
@@ -481,7 +495,10 @@ export default function CompanyComparisonPage() {
     const url = URL.createObjectURL(blob)
 
     link.setAttribute('href', url)
-    link.setAttribute('download', `company_comparison_${selectedFiscalYear}.csv`)
+    const filename = viewMode === 'single'
+      ? `company_comparison_${selectedFiscalYear}.csv`
+      : `company_comparison_timeseries_${startYear}-${endYear}.csv`
+    link.setAttribute('download', filename)
     link.style.visibility = 'hidden'
     document.body.appendChild(link)
     link.click()
