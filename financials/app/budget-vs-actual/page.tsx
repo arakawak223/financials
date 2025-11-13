@@ -48,7 +48,15 @@ export default function BudgetVsActualPage() {
 
   useEffect(() => {
     if (selectedCompanyId) {
+      // Reset periods and selected period when company changes
+      setPeriods([])
+      setSelectedPeriodId('')
+      setVariances([])
       loadPeriods(selectedCompanyId)
+    } else {
+      setPeriods([])
+      setSelectedPeriodId('')
+      setVariances([])
     }
   }, [selectedCompanyId])
 
@@ -76,16 +84,47 @@ export default function BudgetVsActualPage() {
   const loadPeriods = async (companyId: string) => {
     try {
       const supabase = createClient()
+
+      // First get financial_analyses for this company
+      const { data: analyses, error: analysesError } = await supabase
+        .from('financial_analyses')
+        .select('id')
+        .eq('company_id', companyId)
+
+      if (analysesError) {
+        console.error('分析データ読み込みエラー:', analysesError)
+        throw analysesError
+      }
+
+      if (!analyses || analyses.length === 0) {
+        console.log('この企業の分析データが見つかりません')
+        setPeriods([])
+        return
+      }
+
+      // Get all periods for these analyses
+      const analysisIds = analyses.map(a => a.id)
       const { data, error } = await supabase
         .from('financial_periods')
         .select('*')
-        .eq('company_id', companyId)
+        .in('analysis_id', analysisIds)
         .order('fiscal_year', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('期間データ読み込みエラー:', error)
+        throw error
+      }
+
+      console.log(`会計期間データ読み込み完了: ${data?.length || 0}件`)
       setPeriods(data || [])
+
+      // 期間が1つ以上ある場合、最初の期間を自動選択
+      if (data && data.length > 0) {
+        setSelectedPeriodId(data[0].id)
+      }
     } catch (error) {
       console.error('期間データ読み込みエラー:', error)
+      setPeriods([])
     }
   }
 
@@ -176,6 +215,49 @@ export default function BudgetVsActualPage() {
     if (achievement >= 100) return 'text-green-600'
     if (achievement >= 90) return 'text-yellow-600'
     return 'text-red-600'
+  }
+
+  const exportToExcel = () => {
+    if (variances.length === 0) return
+
+    // Create CSV content with BOM for proper encoding in Excel
+    const BOM = '\uFEFF'
+    const headers = ['項目', '予算', '実績', '差異', '達成率']
+
+    const rows = variances.map((metric) => [
+      metric.label,
+      metric.budget?.toString() || '',
+      metric.actual?.toString() || '',
+      metric.variance?.toString() || '',
+      metric.achievement ? `${metric.achievement.toFixed(1)}%` : '',
+    ])
+
+    // Properly escape and quote CSV fields
+    const escapeCsvField = (field: string) => {
+      if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+        return `"${field.replace(/"/g, '""')}"`
+      }
+      return field
+    }
+
+    const csvContent =
+      BOM +
+      [
+        headers.map(escapeCsvField).join(','),
+        ...rows.map((row) => row.map(escapeCsvField).join(',')),
+      ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+
+    link.setAttribute('href', url)
+    link.setAttribute('download', `budget_variance_${selectedPeriodId}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -371,8 +453,10 @@ export default function BudgetVsActualPage() {
 
               {/* アクションエリア */}
               <div className="flex justify-end gap-4">
-                <Button variant="outline">PDFエクスポート</Button>
-                <Button variant="outline">Excelエクスポート</Button>
+                <Button variant="outline" disabled>PDFエクスポート</Button>
+                <Button variant="outline" onClick={exportToExcel}>
+                  Excelエクスポート
+                </Button>
               </div>
             </div>
           )}

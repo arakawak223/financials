@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -424,6 +424,9 @@ export default function CompanyComparisonPage() {
   const exportToCSV = () => {
     if (comparisonData.length === 0) return
 
+    // Add BOM for proper Japanese character encoding in Excel
+    const BOM = '\uFEFF'
+
     const headers = [
       '企業名',
       '業種',
@@ -458,17 +461,32 @@ export default function CompanyComparisonPage() {
       d.ebitda_growth?.toString() || '',
     ])
 
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
+    // Properly escape and quote CSV fields
+    const escapeCsvField = (field: string) => {
+      // Always quote fields to prevent column misalignment
+      const escaped = field.replace(/"/g, '""')
+      return `"${escaped}"`
+    }
 
-    const encodedUri = encodeURI(csvContent)
+    const csvContent =
+      BOM +
+      [
+        headers.map(escapeCsvField).join(','),
+        ...rows.map((row) => row.map(escapeCsvField).join(',')),
+      ].join('\n')
+
+    // Use Blob for proper encoding
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
-    link.setAttribute('href', encodedUri)
+    const url = URL.createObjectURL(blob)
+
+    link.setAttribute('href', url)
     link.setAttribute('download', `company_comparison_${selectedFiscalYear}.csv`)
+    link.style.visibility = 'hidden'
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -711,8 +729,8 @@ export default function CompanyComparisonPage() {
                     const benchmark = data.industry ? industryBenchmarks.get(data.industry) : null
 
                     return (
-                      <>
-                        <tr key={data.company_id} className="border-b hover:bg-gray-50">
+                      <Fragment key={data.company_id}>
+                        <tr className="border-b hover:bg-gray-50">
                           <td className="p-2 font-medium">{data.company_name}</td>
                           <td className="p-2 text-gray-600">{data.industry || '-'}</td>
                           <td className="p-2 text-right">
@@ -815,7 +833,7 @@ export default function CompanyComparisonPage() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     )
                   })}
                 </tbody>
