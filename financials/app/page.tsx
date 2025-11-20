@@ -2,9 +2,15 @@ import { AuthButton } from "@/components/auth-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { hasEnvVars } from "@/lib/utils";
 import Link from "next/link";
-import { Plus, BarChart3, FileText, TrendingUp, Building2 } from "lucide-react";
+import { Plus, BarChart3, FileText, TrendingUp, Building2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Home() {
   return (
@@ -51,12 +57,44 @@ export default function Home() {
 
           {/* クイックアクション */}
           <div className="mb-12">
-            <Link href="/analysis/new">
-              <Button size="lg" className="gap-2">
-                <Plus className="h-5 w-5" />
-                新規財務分析を開始
-              </Button>
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="lg" className="gap-2">
+                  <Plus className="h-5 w-5" />
+                  新規財務分析を開始
+                  <ChevronDown className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                <DropdownMenuItem asChild>
+                  <Link href="/analysis/new" className="flex items-center gap-3 cursor-pointer">
+                    <FileText className="h-5 w-5 text-primary" />
+                    <div>
+                      <div className="font-semibold">決算分析</div>
+                      <div className="text-xs text-gray-600">時系列での財務推移分析</div>
+                    </div>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/budget-vs-actual/new" className="flex items-center gap-3 cursor-pointer">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <div>
+                      <div className="font-semibold">予算実績分析</div>
+                      <div className="text-xs text-gray-600">予算と実績の差異分析</div>
+                    </div>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/company-comparison" className="flex items-center gap-3 cursor-pointer">
+                    <Building2 className="h-5 w-5 text-primary" />
+                    <div>
+                      <div className="font-semibold">企業間比較分析</div>
+                      <div className="text-xs text-gray-600">複数企業の財務指標を比較</div>
+                    </div>
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
 
           {/* 主要機能カテゴリー */}
