@@ -18,9 +18,11 @@ import {
   TrendingDown,
   AlertCircle,
   RefreshCw,
+  FileUp,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/types/database'
+import { BudgetPdfUpload } from '@/components/budget-pdf-upload'
 
 type Company = Database['public']['Tables']['companies']['Row']
 type FinancialPeriod = Database['public']['Tables']['financial_periods']['Row']
@@ -405,7 +407,47 @@ export default function BudgetVsActualPage() {
             </Card>
           ) : (
             <div className="space-y-6">
+              {/* PDFアップロードセクション（データがない場合） */}
+              {variances.length === 0 && (
+                <Card className="p-6 bg-blue-50 border-blue-200">
+                  <div className="flex items-start gap-4 mb-6">
+                    <FileUp className="h-8 w-8 text-blue-600 mt-1" />
+                    <div>
+                      <h3 className="text-lg font-semibold text-blue-900 mb-2">
+                        PDFから予算・実績データをインポート
+                      </h3>
+                      <p className="text-sm text-blue-700 mb-4">
+                        予算書または決算書のPDFファイルをアップロードすると、自動的にデータを抽出して登録できます
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <BudgetPdfUpload
+                      companyId={selectedCompanyId}
+                      periodId={selectedPeriodId}
+                      fiscalYear={
+                        periods.find((p) => p.id === selectedPeriodId)
+                          ?.fiscal_year || new Date().getFullYear()
+                      }
+                      dataType="budget"
+                      onSuccess={loadVarianceData}
+                    />
+                    <BudgetPdfUpload
+                      companyId={selectedCompanyId}
+                      periodId={selectedPeriodId}
+                      fiscalYear={
+                        periods.find((p) => p.id === selectedPeriodId)
+                          ?.fiscal_year || new Date().getFullYear()
+                      }
+                      dataType="actual"
+                      onSuccess={loadVarianceData}
+                    />
+                  </div>
+                </Card>
+              )}
+
               {/* サマリーカード */}
+              {variances.length > 0 && (
               <div className="grid md:grid-cols-3 gap-4">
                 <Card className="p-6">
                   <div className="text-sm text-gray-600 mb-1">予算達成率</div>
@@ -429,8 +471,10 @@ export default function BudgetVsActualPage() {
                   </div>
                 </Card>
               </div>
+              )}
 
               {/* 差異分析テーブル */}
+              {variances.length > 0 && (
               <Card>
                 <div className="p-6">
                   <h2 className="text-xl font-semibold mb-4">損益計算書 差異分析</h2>
@@ -488,8 +532,10 @@ export default function BudgetVsActualPage() {
                   </div>
                 </div>
               </Card>
+              )}
 
               {/* AI分析コメント */}
+              {variances.length > 0 && (
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold">AI分析コメント</h2>
@@ -521,14 +567,17 @@ export default function BudgetVsActualPage() {
                   </div>
                 )}
               </Card>
+              )}
 
               {/* アクションエリア */}
+              {variances.length > 0 && (
               <div className="flex justify-end gap-4">
                 <Button variant="outline" disabled>PDFエクスポート</Button>
                 <Button variant="outline" onClick={exportToExcel}>
                   Excelエクスポート
                 </Button>
               </div>
+              )}
             </div>
           )}
         </div>
