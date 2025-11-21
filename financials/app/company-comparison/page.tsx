@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -85,6 +85,7 @@ interface CompanyRanking {
 
 export default function CompanyComparisonPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [companies, setCompanies] = useState<Company[]>([])
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<string[]>([])
   const [fiscalYears, setFiscalYears] = useState<number[]>([])
@@ -98,10 +99,18 @@ export default function CompanyComparisonPage() {
   const [startYear, setStartYear] = useState<number | null>(null)
   const [endYear, setEndYear] = useState<number | null>(null)
   const [timeseriesData, setTimeseriesData] = useState<Map<string, ComparisonData[]>>(new Map())
+  const [aiAnalysis, setAiAnalysis] = useState<string>('')
+  const [analyzingAI, setAnalyzingAI] = useState(false)
 
   useEffect(() => {
     loadCompanies()
     loadFiscalYears()
+
+    // Load selected companies from query params
+    const companiesParam = searchParams.getAll('companies')
+    if (companiesParam.length > 0) {
+      setSelectedCompanyIds(companiesParam)
+    }
   }, [])
 
   useEffect(() => {
@@ -421,6 +430,40 @@ export default function CompanyComparisonPage() {
     )
   }
 
+  const generateAIAnalysis = async () => {
+    const hasData = viewMode === 'single' ? comparisonData.length > 0 : timeseriesData.size > 0
+    if (!hasData) return
+
+    setAnalyzingAI(true)
+    setAiAnalysis('')
+
+    try {
+      const response = await fetch('/api/analyze-comparison', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          comparisonData: viewMode === 'single' ? comparisonData : Array.from(timeseriesData.values()).flat(),
+          fiscalYear: selectedFiscalYear || new Date().getFullYear(),
+          viewMode,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('AI分析の生成に失敗しました')
+      }
+
+      const data = await response.json()
+      setAiAnalysis(data.analysis)
+    } catch (error) {
+      console.error('AI分析エラー:', error)
+      setAiAnalysis('AI分析の生成中にエラーが発生しました。もう一度お試しください。')
+    } finally {
+      setAnalyzingAI(false)
+    }
+  }
+
   const exportToCSV = () => {
     // Determine which data to export based on view mode
     let dataToExport: ComparisonData[] = []
@@ -718,6 +761,41 @@ export default function CompanyComparisonPage() {
             </p>
           </div>
         </Card>
+
+        {/* AI Analysis Comment */}
+        {((viewMode === 'single' && comparisonData.length > 0) || (viewMode === 'timeseries' && timeseriesData.size > 0)) && (
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">AI分析コメント</h2>
+              <Button
+                onClick={generateAIAnalysis}
+                disabled={analyzingAI}
+                variant="outline"
+              >
+                {analyzingAI ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    分析中...
+                  </>
+                ) : (
+                  <>AI分析を生成</>
+                )}
+              </Button>
+            </div>
+            {aiAnalysis ? (
+              <div className="prose prose-sm max-w-none">
+                <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+                  {aiAnalysis}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p className="mb-2">AI分析コメントはまだ生成されていません</p>
+                <p className="text-sm">上のボタンをクリックして、AI分析を生成してください</p>
+              </div>
+            )}
+          </Card>
+        )}
 
         {/* Single Year Comparison Table */}
         {viewMode === 'single' && comparisonData.length > 0 && (

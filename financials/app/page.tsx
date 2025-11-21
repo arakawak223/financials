@@ -28,7 +28,7 @@ export default function Home() {
             <Link href="/budget-vs-actual" className="text-sm hover:underline">
               予算実績分析
             </Link>
-            <Link href="/company-comparison" className="text-sm hover:underline">
+            <Link href="/company-comparison/new" className="text-sm hover:underline">
               企業間比較
             </Link>
             <Link href="/companies" className="text-sm hover:underline">
@@ -85,7 +85,7 @@ export default function Home() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/company-comparison" className="flex items-center gap-3 cursor-pointer">
+                  <Link href="/company-comparison/new" className="flex items-center gap-3 cursor-pointer">
                     <Building2 className="h-5 w-5 text-primary" />
                     <div>
                       <div className="font-semibold">企業間比較分析</div>
@@ -135,7 +135,7 @@ export default function Home() {
                     </div>
                   </div>
                 </Link>
-                <Link href="/company-comparison">
+                <Link href="/company-comparison/new">
                   <div className="p-4 border rounded-lg hover:bg-accent transition-colors cursor-pointer">
                     <div className="flex items-center gap-3">
                       <Building2 className="h-6 w-6 text-primary" />

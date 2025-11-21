@@ -41,6 +41,8 @@ export default function BudgetVsActualPage() {
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [variances, setVariances] = useState<VarianceMetric[]>([])
+  const [aiAnalysis, setAiAnalysis] = useState<string>('')
+  const [analyzingAI, setAnalyzingAI] = useState(false)
 
   useEffect(() => {
     loadCompanies()
@@ -215,6 +217,42 @@ export default function BudgetVsActualPage() {
     if (achievement >= 100) return 'text-green-600'
     if (achievement >= 90) return 'text-yellow-600'
     return 'text-red-600'
+  }
+
+  const generateAIAnalysis = async () => {
+    if (variances.length === 0) return
+
+    setAnalyzingAI(true)
+    setAiAnalysis('')
+
+    try {
+      const selectedCompany = companies.find(c => c.id === selectedCompanyId)
+      const selectedPeriod = periods.find(p => p.id === selectedPeriodId)
+
+      const response = await fetch('/api/analyze-budget', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          variances,
+          companyName: selectedCompany?.name || '企業',
+          fiscalYear: selectedPeriod?.fiscal_year || new Date().getFullYear(),
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('AI分析の生成に失敗しました')
+      }
+
+      const data = await response.json()
+      setAiAnalysis(data.analysis)
+    } catch (error) {
+      console.error('AI分析エラー:', error)
+      setAiAnalysis('AI分析の生成中にエラーが発生しました。もう一度お試しください。')
+    } finally {
+      setAnalyzingAI(false)
+    }
   }
 
   const exportToExcel = () => {
@@ -449,6 +487,39 @@ export default function BudgetVsActualPage() {
                     </table>
                   </div>
                 </div>
+              </Card>
+
+              {/* AI分析コメント */}
+              <Card className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold">AI分析コメント</h2>
+                  <Button
+                    onClick={generateAIAnalysis}
+                    disabled={analyzingAI || variances.length === 0}
+                    variant="outline"
+                  >
+                    {analyzingAI ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        分析中...
+                      </>
+                    ) : (
+                      <>AI分析を生成</>
+                    )}
+                  </Button>
+                </div>
+                {aiAnalysis ? (
+                  <div className="prose prose-sm max-w-none">
+                    <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+                      {aiAnalysis}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p className="mb-2">AI分析コメントはまだ生成されていません</p>
+                    <p className="text-sm">上のボタンをクリックして、AI分析を生成してください</p>
+                  </div>
+                )}
               </Card>
 
               {/* アクションエリア */}
