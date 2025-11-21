@@ -95,8 +95,9 @@ export async function POST(request: NextRequest) {
         }
 
         Object.entries(plMapping).forEach(([plKey, budgetKey]) => {
-          if (extractedData.profitLoss?.[plKey] !== undefined) {
-            budgetData[budgetKey] = extractedData.profitLoss[plKey]
+          const value = (extractedData.profitLoss as any)?.[plKey]
+          if (value !== undefined) {
+            budgetData[budgetKey] = value
           }
         })
 
