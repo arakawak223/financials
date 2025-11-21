@@ -12,6 +12,7 @@ import {
   Building2,
   Plus,
   Search,
+  FileUp,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -22,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ComparisonPdfUpload } from '@/components/comparison-pdf-upload'
 
 interface Company {
   id: string
@@ -48,6 +50,11 @@ export default function CompanyComparisonSetupPage() {
     name: '',
     industry_id: '',
   })
+
+  // PDFアップロード関連の状態
+  const [showPdfUpload, setShowPdfUpload] = useState(false)
+  const [createdCompanyId, setCreatedCompanyId] = useState<string | null>(null)
+  const [fiscalYear, setFiscalYear] = useState<number>(new Date().getFullYear())
 
   useEffect(() => {
     loadData()
@@ -104,20 +111,40 @@ export default function CompanyComparisonSetupPage() {
       if (error) throw error
 
       await loadData()
-      setNewCompany({
-        name: '',
-        industry_id: '',
-      })
-      setShowNewCompanyForm(false)
 
       // 作成した企業を自動選択
       if (data && data.length > 0) {
         setSelectedCompanyIds([...selectedCompanyIds, data[0].id])
+        setCreatedCompanyId(data[0].id)
+        // PDFアップロードオプションを表示
+        setShowPdfUpload(true)
       }
     } catch (error) {
       console.error('企業作成エラー:', error)
       alert('企業の作成に失敗しました')
     }
+  }
+
+  const handlePdfUploadSuccess = () => {
+    // PDFアップロード成功後、フォームをリセット
+    setShowPdfUpload(false)
+    setCreatedCompanyId(null)
+    setNewCompany({
+      name: '',
+      industry_id: '',
+    })
+    setShowNewCompanyForm(false)
+  }
+
+  const handleSkipPdfUpload = () => {
+    // PDFアップロードをスキップ
+    setShowPdfUpload(false)
+    setCreatedCompanyId(null)
+    setNewCompany({
+      name: '',
+      industry_id: '',
+    })
+    setShowNewCompanyForm(false)
   }
 
   const toggleCompanySelection = (companyId: string) => {
@@ -241,6 +268,54 @@ export default function CompanyComparisonSetupPage() {
                   登録して選択リストに追加
                 </Button>
               </div>
+            </div>
+          </Card>
+        )}
+
+        {/* PDFアップロードセクション（新規企業作成後） */}
+        {showPdfUpload && createdCompanyId && (
+          <Card className="p-6 bg-green-50 border-green-200">
+            <div className="flex items-start gap-4 mb-4">
+              <FileUp className="h-6 w-6 text-green-600 mt-1 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-green-900 mb-2">
+                  企業登録完了！決算書PDFをアップロードしますか？
+                </h3>
+                <p className="text-sm text-green-700 mb-4">
+                  {newCompany.name}の決算書PDFをアップロードすると、自動的に財務データを抽出して比較分析に使用できます。
+                  後でスキップすることもできます。
+                </p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <Label htmlFor="fiscal-year" className="text-sm font-medium mb-2 block">
+                  会計年度
+                </Label>
+                <Input
+                  id="fiscal-year"
+                  type="number"
+                  value={fiscalYear}
+                  onChange={(e) => setFiscalYear(parseInt(e.target.value))}
+                  placeholder="例: 2023"
+                  min="2000"
+                  max="2100"
+                />
+              </div>
+            </div>
+
+            <ComparisonPdfUpload
+              companyId={createdCompanyId}
+              companyName={newCompany.name}
+              fiscalYear={fiscalYear}
+              onSuccess={handlePdfUploadSuccess}
+            />
+
+            <div className="mt-4 flex justify-end">
+              <Button variant="outline" onClick={handleSkipPdfUpload}>
+                スキップして続行
+              </Button>
             </div>
           </Card>
         )}
