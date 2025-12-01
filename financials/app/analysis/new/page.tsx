@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 
-type Step = 'industry' | 'template' | 'company' | 'period' | 'upload' | 'review'
+type Step = 'basic_info' | 'template' | 'upload' | 'review'
 
 interface AccountFormat {
   id: string
@@ -31,7 +31,7 @@ interface AccountFormat {
 function NewAnalysisPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [currentStep, setCurrentStep] = useState<Step>('industry')
+  const [currentStep, setCurrentStep] = useState<Step>('basic_info')
   const [isProcessing, setIsProcessing] = useState(false)
   const [processingStatus, setProcessingStatus] = useState('')
 
@@ -109,7 +109,7 @@ function NewAnalysisPageContent() {
   }, [industryId, formats, formatId])
 
   const handleNext = () => {
-    const steps: Step[] = ['industry', 'template', 'company', 'period', 'upload', 'review']
+    const steps: Step[] = ['basic_info', 'template', 'upload', 'review']
     const currentIndex = steps.indexOf(currentStep)
     if (currentIndex < steps.length - 1) {
       setCurrentStep(steps[currentIndex + 1])
@@ -117,7 +117,7 @@ function NewAnalysisPageContent() {
   }
 
   const handleBack = () => {
-    const steps: Step[] = ['industry', 'template', 'company', 'period', 'upload', 'review']
+    const steps: Step[] = ['basic_info', 'template', 'upload', 'review']
     const currentIndex = steps.indexOf(currentStep)
     if (currentIndex > 0) {
       setCurrentStep(steps[currentIndex - 1])
@@ -270,10 +270,8 @@ function NewAnalysisPageContent() {
       <div className="mb-8">
         <div className="flex justify-between">
           {[
-            { key: 'industry', label: '業種' },
+            { key: 'basic_info', label: '分析対象情報' },
             { key: 'template', label: 'テンプレート' },
-            { key: 'company', label: '企業名' },
-            { key: 'period', label: '対象期間' },
             { key: 'upload', label: 'ファイル' },
             { key: 'review', label: '確認' },
           ].map((step, index) => (
@@ -293,7 +291,7 @@ function NewAnalysisPageContent() {
                 </div>
                 <span className="text-sm mt-2">{step.label}</span>
               </div>
-              {index < 5 && (
+              {index < 3 && (
                 <div className="flex-1 h-0.5 bg-gray-200 mx-2 mt-[-20px]" />
               )}
             </div>
@@ -303,15 +301,30 @@ function NewAnalysisPageContent() {
 
       {/* ステップコンテンツ */}
       <Card className="p-6 mb-6">
-        {/* ステップ1: 業種選択 */}
-        {currentStep === 'industry' && (
+        {/* ステップ1: 分析対象情報（業種・企業名・対象期間を統合） */}
+        {currentStep === 'basic_info' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-semibold">業種選択</h2>
+            <h2 className="text-2xl font-semibold">分析対象情報</h2>
             <p className="text-gray-600">
-              分析対象企業の業種を選択してください。業種に応じた科目テンプレートが自動的に選択されます。
+              分析対象企業の基本情報と対象期間を入力してください。
             </p>
 
-            <div className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* 企業名 */}
+              <div className="md:col-span-2">
+                <Label htmlFor="companyName">企業名 *</Label>
+                <input
+                  id="companyName"
+                  type="text"
+                  className="w-full border rounded-md px-3 py-2 mt-1"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="例: 株式会社サンプル"
+                  required
+                />
+              </div>
+
+              {/* 業種 */}
               <div>
                 <Label htmlFor="industry">業種 *</Label>
                 <select
@@ -331,6 +344,60 @@ function NewAnalysisPageContent() {
                   <option value="re">不動産業</option>
                   <option value="other">その他</option>
                 </select>
+              </div>
+
+              {/* 対象期間 */}
+              <div className="md:col-span-2">
+                <Label className="mb-2 block">対象期間 *</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="fiscalYearStart" className="text-sm text-gray-600">開始年度</Label>
+                    <select
+                      id="fiscalYearStart"
+                      className="w-full border rounded-md px-3 py-2 mt-1"
+                      value={fiscalYearStart}
+                      onChange={(e) => setFiscalYearStart(parseInt(e.target.value))}
+                    >
+                      {Array.from({ length: 10 }, (_, i) => {
+                        const year = new Date().getFullYear() - i
+                        return (
+                          <option key={year} value={year}>
+                            {year}年度
+                          </option>
+                        )
+                      })}
+                    </select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="fiscalYearEnd" className="text-sm text-gray-600">終了年度</Label>
+                    <select
+                      id="fiscalYearEnd"
+                      className="w-full border rounded-md px-3 py-2 mt-1"
+                      value={fiscalYearEnd}
+                      onChange={(e) => setFiscalYearEnd(parseInt(e.target.value))}
+                    >
+                      {Array.from({ length: 10 }, (_, i) => {
+                        const year = new Date().getFullYear() - i
+                        return (
+                          <option key={year} value={year}>
+                            {year}年度
+                          </option>
+                        )
+                      })}
+                    </select>
+                  </div>
+                </div>
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-2">
+                  <p className="text-sm text-blue-800">
+                    <strong>分析期間:</strong> {fiscalYearStart}年度 〜{' '}
+                    {fiscalYearEnd}年度（
+                    {fiscalYearEnd - fiscalYearStart + 1}期分）
+                  </p>
+                  <p className="text-sm text-blue-700 mt-1">
+                    通常は直近3期分を選択します
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -410,121 +477,14 @@ function NewAnalysisPageContent() {
           </div>
         )}
 
-        {/* ステップ3: 企業名 */}
-        {currentStep === 'company' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-semibold">企業名入力</h2>
-            <p className="text-gray-600">
-              分析対象企業の名称を入力してください。
-            </p>
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="companyName">企業名 *</Label>
-                <input
-                  id="companyName"
-                  type="text"
-                  className="w-full border rounded-md px-3 py-2 mt-1"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="例: 株式会社サンプル"
-                  required
-                />
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-                <div className="text-sm text-blue-800">
-                  <p className="font-semibold mb-2">選択済みの情報</p>
-                  <p>
-                    <span className="font-medium">業種:</span>{' '}
-                    {industryId
-                      ? {
-                          mfg: '製造業',
-                          const: '建設業',
-                          whole: '卸売業',
-                          retail: '小売業',
-                          it: '情報通信業',
-                          trans: '運輸業',
-                          re: '不動産業',
-                          svc: 'サービス業',
-                          other: 'その他',
-                        }[industryId]
-                      : '未選択'}
-                  </p>
-                  <p className="mt-1">
-                    <span className="font-medium">テンプレート:</span>{' '}
-                    {formatId
-                      ? formats.find((f) => f.id === formatId)?.name || '不明'
-                      : '使用しない'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ステップ4: 対象期間 */}
-        {currentStep === 'period' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-semibold">対象期間</h2>
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="fiscalYearStart">開始年度 *</Label>
-                <select
-                  id="fiscalYearStart"
-                  className="w-full border rounded-md px-3 py-2 mt-1"
-                  value={fiscalYearStart}
-                  onChange={(e) => setFiscalYearStart(parseInt(e.target.value))}
-                >
-                  {Array.from({ length: 10 }, (_, i) => {
-                    const year = new Date().getFullYear() - i
-                    return (
-                      <option key={year} value={year}>
-                        {year}年度
-                      </option>
-                    )
-                  })}
-                </select>
-              </div>
-
-              <div>
-                <Label htmlFor="fiscalYearEnd">終了年度 *</Label>
-                <select
-                  id="fiscalYearEnd"
-                  className="w-full border rounded-md px-3 py-2 mt-1"
-                  value={fiscalYearEnd}
-                  onChange={(e) => setFiscalYearEnd(parseInt(e.target.value))}
-                >
-                  {Array.from({ length: 10 }, (_, i) => {
-                    const year = new Date().getFullYear() - i
-                    return (
-                      <option key={year} value={year}>
-                        {year}年度
-                      </option>
-                    )
-                  })}
-                </select>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-                <p className="text-sm text-blue-800">
-                  <strong>分析期間:</strong> {fiscalYearStart}年度 〜{' '}
-                  {fiscalYearEnd}年度（
-                  {fiscalYearEnd - fiscalYearStart + 1}期分）
-                </p>
-                <p className="text-sm text-blue-700 mt-2">
-                  通常は直近3期分を選択します
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ステップ5: ファイルアップロード */}
+        {/* ステップ3: ファイルアップロード */}
         {currentStep === 'upload' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold">PDFファイルアップロード</h2>
+            <p className="text-gray-600">
+              決算書・勘定科目内訳書のPDFファイルをアップロードしてください。
+              抽出後、データを編集することも可能です。
+            </p>
 
             <PdfUpload
               onFilesUploaded={setUploadedFiles}
@@ -533,7 +493,7 @@ function NewAnalysisPageContent() {
           </div>
         )}
 
-        {/* ステップ6: 確認 */}
+        {/* ステップ4: 確認 */}
         {currentStep === 'review' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold">内容確認</h2>
@@ -601,7 +561,7 @@ function NewAnalysisPageContent() {
         <Button
           variant="outline"
           onClick={handleBack}
-          disabled={currentStep === 'industry'}
+          disabled={currentStep === 'basic_info'}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           戻る
@@ -611,8 +571,7 @@ function NewAnalysisPageContent() {
           <Button
             onClick={handleNext}
             disabled={
-              (currentStep === 'industry' && !industryId) ||
-              (currentStep === 'company' && !companyName) ||
+              (currentStep === 'basic_info' && (!industryId || !companyName)) ||
               (currentStep === 'upload' && uploadedFiles.length === 0)
             }
           >

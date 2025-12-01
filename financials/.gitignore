@@ -43,3 +43,4 @@ google-credentials.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+google-vision-credentials.json

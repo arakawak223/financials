@@ -13,6 +13,7 @@ import {
   Plus,
   Search,
   FileUp,
+  Trash2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -23,7 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ComparisonPdfUpload } from '@/components/comparison-pdf-upload'
+import { UnifiedPdfUpload } from '@/components/unified-pdf-upload'
+import type { ExtractedFinancialData } from '@/components/unified-pdf-upload'
 
 interface Company {
   id: string
@@ -153,6 +155,36 @@ export default function CompanyComparisonSetupPage() {
         ? prev.filter((id) => id !== companyId)
         : [...prev, companyId]
     )
+  }
+
+  const handleDeleteCompany = async (companyId: string, companyName: string, e: React.MouseEvent) => {
+    // クリックイベントの伝播を停止（親要素の選択処理を防ぐ）
+    e.stopPropagation()
+
+    if (!confirm(`「${companyName}」を削除してもよろしいですか？\n\nこの操作は取り消せません。関連する財務データも全て削除されます。`)) {
+      return
+    }
+
+    const supabase = createClient()
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', companyId)
+
+      if (error) throw error
+
+      // 選択リストからも削除
+      setSelectedCompanyIds((prev) => prev.filter((id) => id !== companyId))
+
+      // リストを再読み込み
+      await loadData()
+
+      alert(`「${companyName}」を削除しました`)
+    } catch (error) {
+      console.error('企業削除エラー:', error)
+      alert('企業の削除に失敗しました')
+    }
   }
 
   const handleProceedToComparison = () => {
@@ -305,11 +337,23 @@ export default function CompanyComparisonSetupPage() {
               </div>
             </div>
 
-            <ComparisonPdfUpload
+            <UnifiedPdfUpload
+              title="決算書PDFをアップロード"
+              description={`${newCompany.name}の${fiscalYear}年度の決算書PDFを選択してください`}
               companyId={createdCompanyId}
               companyName={newCompany.name}
               fiscalYear={fiscalYear}
-              onSuccess={handlePdfUploadSuccess}
+              dataType="comparison"
+              uploadApiUrl="/api/company-comparison/quick-upload"
+              saveApiUrl="/api/company-comparison/save-extracted-data"
+              onSuccess={(data) => {
+                console.log('PDF upload success:', data)
+                handlePdfUploadSuccess()
+              }}
+              onError={(error) => {
+                console.error('PDF upload error:', error)
+              }}
+              allowEdit={true}
             />
 
             <div className="mt-4 flex justify-end">
@@ -383,7 +427,7 @@ export default function CompanyComparisonSetupPage() {
                 return (
                   <div
                     key={company.id}
-                    className={`p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors ${
+                    className={`p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors relative ${
                       selectedCompanyIds.includes(company.id)
                         ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200'
@@ -405,6 +449,15 @@ export default function CompanyComparisonSetupPage() {
                           </p>
                         )}
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={(e) => handleDeleteCompany(company.id, company.name, e)}
+                        title="企業を削除"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 )

@@ -104,6 +104,73 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 財務指標を計算して保存
+    if (extractedData.profitLoss && extractedData.balanceSheet) {
+      console.log('💾 財務指標を計算して保存します')
+
+      const pl = extractedData.profitLoss
+      const bs = extractedData.balanceSheet
+
+      // 営業利益率 = 営業利益 / 売上高 * 100
+      const operating_margin = pl.netSales && pl.netSales > 0
+        ? ((pl.operatingIncome || 0) / pl.netSales) * 100
+        : null
+
+      // ROE = 当期純利益 / 純資産 * 100
+      const roe = bs.totalNetAssets && bs.totalNetAssets > 0
+        ? ((pl.netIncome || 0) / bs.totalNetAssets) * 100
+        : null
+
+      // ROA = 当期純利益 / 総資産 * 100
+      const roa = bs.totalAssets && bs.totalAssets > 0
+        ? ((pl.netIncome || 0) / bs.totalAssets) * 100
+        : null
+
+      // 自己資本比率 = 純資産 / 総資産 * 100
+      const equity_ratio = bs.totalAssets && bs.totalAssets > 0 && bs.totalNetAssets
+        ? (bs.totalNetAssets / bs.totalAssets) * 100
+        : null
+
+      // EBITDA = 営業利益 + 減価償却費
+      // 減価償却費は勘定科目明細から取得
+      let depreciation = pl.depreciation || 0
+      if (extractedData.accountDetails && Array.isArray(extractedData.accountDetails)) {
+        const depreciationItem = extractedData.accountDetails.find(
+          (item: any) => item.itemName === '減価償却費' || item.accountType === 'depreciation'
+        )
+        if (depreciationItem) {
+          depreciation = depreciationItem.amount || 0
+        }
+      }
+      const ebitda = (pl.operatingIncome || 0) + depreciation
+
+      const metricsData = {
+        analysis_id: analysisId,
+        period_id: periodId,
+        roe: roe,
+        roa: roa,
+        operating_profit_margin: operating_margin,  // DBのカラム名に合わせる
+        equity_ratio: equity_ratio,
+        ebitda: ebitda,
+        // FCFと売上成長率は前年データが必要なため、ここでは計算しない
+        fcf: null,
+        sales_growth_rate: null,  // DBのカラム名に合わせる
+      }
+
+      console.log('  計算結果:', JSON.stringify(metricsData, null, 2))
+
+      const { error: metricsError } = await supabase
+        .from('financial_metrics')
+        .upsert(metricsData, { onConflict: 'analysis_id,period_id' })
+
+      if (metricsError) {
+        console.error('❌ 財務指標保存エラー:', metricsError)
+        // エラーでも続行
+      } else {
+        console.log('✅ 財務指標保存成功')
+      }
+    }
+
     return NextResponse.json({
       success: true,
       periodId,

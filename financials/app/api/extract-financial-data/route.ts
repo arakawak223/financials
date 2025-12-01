@@ -15,8 +15,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ocrTextが配列の場合は文字列に変換
+    const ocrTextString = Array.isArray(ocrText) ? ocrText.join('\n') : ocrText
+
     console.log('🤖 Claude API による財務データ抽出開始（サーバーサイド）...')
-    console.log('📄 入力テキスト長:', ocrText.length, '文字')
+    console.log('📄 入力テキスト長:', ocrTextString.length, '文字')
 
     // サーバーサイドなので、APIキーは環境変数から安全に取得
     const apiKey = process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY
@@ -52,7 +55,7 @@ export async function POST(request: NextRequest) {
 OCRの特性上、文字間にスペースが入ったり、レイアウトが崩れていますが、文脈から正しい勘定科目と金額を判断してください。
 
 【OCRテキスト】
-${ocrText}
+${ocrTextString}
 
 【指示】
 1. 貸借対照表（BS）から以下の項目を抽出：
@@ -246,7 +249,7 @@ ${ocrText}
           'i'
         )
 
-        const match = ocrText.match(pattern)
+        const match = ocrTextString.match(pattern)
 
         if (match && match[1]) {
           // 抽出した数値からカンマを除去して整数に変換

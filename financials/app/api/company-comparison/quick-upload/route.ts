@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
           periods_count: 1,
           status: 'completed',
           analysis_purpose: 'comparison_only', // 比較専用フラグ
+          analysis_date: new Date().toISOString().split('T')[0], // 今日の日付を設定
         })
         .select('id')
         .single()

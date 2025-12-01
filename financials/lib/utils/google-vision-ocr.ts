@@ -1,106 +1,12 @@
-// Google Cloud Vision API を使用したOCR処理
-import vision from '@google-cloud/vision'
-import path from 'path'
+// Claude API を使用したOCR処理
+import Anthropic from '@anthropic-ai/sdk'
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY || '',
+})
 
 /**
- * Google Cloud Vision APIクライアントを初期化
- */
-function getVisionClient() {
-  console.log('🔧 Vision API クライアント初期化中...')
-  console.log('🔍 環境変数チェック:')
-  console.log('  - GOOGLE_CLOUD_CREDENTIALS_BASE64:', process.env.GOOGLE_CLOUD_CREDENTIALS_BASE64 ? '設定あり（Base64, 長さ: ' + process.env.GOOGLE_CLOUD_CREDENTIALS_BASE64.length + '）' : '未設定')
-  console.log('  - GOOGLE_CLOUD_CREDENTIALS:', process.env.GOOGLE_CLOUD_CREDENTIALS ? '設定あり（JSON, 長さ: ' + process.env.GOOGLE_CLOUD_CREDENTIALS.length + '）' : '未設定')
-
-  // 方法1: Base64エンコードされた認証情報（推奨）
-  const credentialsBase64 = process.env.GOOGLE_CLOUD_CREDENTIALS_BASE64
-  if (credentialsBase64) {
-    try {
-      console.log('🔐 Base64エンコードされた認証情報をデコード中...')
-      console.log('📏 Base64文字列の長さ:', credentialsBase64.length, '文字')
-
-      const credentialsJson = Buffer.from(credentialsBase64, 'base64').toString('utf-8')
-      console.log('📝 デコード後の長さ:', credentialsJson.length, '文字')
-      console.log('📝 デコード後の最初の200文字:', credentialsJson.substring(0, 200))
-
-      const credentials = JSON.parse(credentialsJson)
-
-      console.log('✅ JSONパース成功')
-      console.log('🔑 認証情報キー:', Object.keys(credentials).join(', '))
-      console.log('📧 Service Account:', credentials.client_email)
-      console.log('🆔 Project ID:', credentials.project_id)
-
-      // private_keyの詳細確認
-      if (credentials.private_key) {
-        console.log('🔑 private_key の長さ:', credentials.private_key.length, '文字')
-        console.log('🔑 private_key の開始:', credentials.private_key.substring(0, 50))
-        console.log('🔑 private_key の終了:', credentials.private_key.substring(credentials.private_key.length - 50))
-        console.log('🔑 private_key に含まれる \\n の数:', (credentials.private_key.match(/\n/g) || []).length)
-        console.log('🔑 private_key に含まれる \\\\n (文字列) の数:', (credentials.private_key.match(/\\n/g) || []).length)
-      } else {
-        console.error('❌ private_key が見つかりません！')
-      }
-
-      console.log('🚀 Vision API クライアント作成中...')
-      const client = new vision.ImageAnnotatorClient({
-        credentials,
-      })
-      console.log('✅ Vision API クライアント作成成功')
-
-      return client
-    } catch (error) {
-      console.error('❌ Base64デコードまたはJSONパースまたはクライアント作成に失敗')
-      console.error('📝 エラーの型:', error instanceof Error ? error.constructor.name : typeof error)
-      console.error('📝 エラーメッセージ:', error instanceof Error ? error.message : String(error))
-      console.error('📝 エラースタック:', error instanceof Error ? error.stack : 'N/A')
-      throw new Error(`Base64デコードエラー: ${error instanceof Error ? error.message : String(error)}`)
-    }
-  }
-
-  // 方法2: JSON文字列（フォールバック）
-  const credentialsJson = process.env.GOOGLE_CLOUD_CREDENTIALS
-  if (credentialsJson) {
-    try {
-      console.log('🔍 JSON文字列形式の認証情報を処理中...')
-      console.log('📝 環境変数の長さ:', credentialsJson.length, '文字')
-
-      let credentials
-      if (typeof credentialsJson === 'string') {
-        credentials = JSON.parse(credentialsJson)
-      } else {
-        credentials = credentialsJson
-      }
-
-      console.log('✅ JSONパース成功')
-      console.log('📧 Service Account:', credentials.client_email)
-      console.log('🆔 Project ID:', credentials.project_id)
-
-      return new vision.ImageAnnotatorClient({
-        credentials,
-      })
-    } catch (error) {
-      console.error('❌ JSON認証情報のパースに失敗')
-      console.error('📝 エラー:', error instanceof Error ? error.message : String(error))
-
-      if (error instanceof SyntaxError) {
-        console.error('⚠️  JSON構文エラー')
-        console.error('💡 ヒント: GOOGLE_CLOUD_CREDENTIALS_BASE64 を使用することを推奨します')
-      }
-
-      throw new Error(`JSON認証情報パースエラー: ${error instanceof Error ? error.message : String(error)}`)
-    }
-  }
-
-  // ファイルベースの認証を使用（ローカル開発環境）
-  const credentialsPath = path.join(process.cwd(), 'google-credentials.json')
-  console.log('📁 認証情報ファイル:', credentialsPath)
-
-  return new vision.ImageAnnotatorClient({
-    keyFilename: credentialsPath,
-  })
-}
-
-/**
- * PDFをGoogle Cloud Vision APIでOCR処理
+ * PDFをClaude APIでOCR処理
  * @param pdfBuffer PDFファイルのバッファ
  * @returns OCRで抽出されたテキスト（ページごと）
  */
@@ -110,87 +16,62 @@ export async function extractTextWithGoogleVision(
   text: string[]
   confidence: number
 }> {
-  console.log('🔧 Google Cloud Vision API による OCR 処理開始...')
+  console.log('🔧 Claude API による OCR 処理開始...')
 
   try {
-    const client = getVisionClient()
-
     // PDFをbase64エンコード
     const base64Pdf = pdfBuffer.toString('base64')
+    console.log('📄 PDFサイズ:', pdfBuffer.length, 'bytes')
 
-    // Vision APIリクエスト
-    const request = {
-      requests: [
+    console.log('📤 Claude API リクエスト送信中...')
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-5-20250929',
+      max_tokens: 16000,
+      messages: [
         {
-          inputConfig: {
-            mimeType: 'application/pdf',
-            content: base64Pdf,
-          },
-          features: [
+          role: 'user',
+          content: [
             {
-              type: 'DOCUMENT_TEXT_DETECTION' as const,
-              // 日本語の精度向上のため、言語ヒントを設定
-              languageHints: ['ja', 'en'],
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: 'application/pdf',
+                data: base64Pdf,
+              },
+            },
+            {
+              type: 'text',
+              text: 'このPDF文書に含まれる全てのテキストを抽出してください。文書の構造や書式を無視して、テキストのみを出力してください。',
             },
           ],
         },
       ],
-    }
+    })
 
-    console.log('📤 Vision API リクエスト送信中...')
-    const [result] = await client.batchAnnotateFiles(request)
+    console.log('✅ Claude API レスポンス受信')
 
-    if (!result.responses || result.responses.length === 0) {
-      throw new Error('Vision API からレスポンスがありません')
-    }
+    // レスポンスからテキストを抽出
+    const extractedText = message.content
+      .filter((block) => block.type === 'text')
+      .map((block) => (block as { type: 'text'; text: string }).text)
+      .join('\n')
 
-    const textPages: string[] = []
-    let totalConfidence = 0
-    let pageCount = 0
+    console.log(`✅ Claude API OCR 完了`)
+    console.log(`📝 総文字数: ${extractedText.length}`)
 
-    // 各ページのテキストを抽出
-    for (const response of result.responses) {
-      if (response.responses) {
-        for (const pageResponse of response.responses) {
-          if (pageResponse.fullTextAnnotation) {
-            const text = pageResponse.fullTextAnnotation.text || ''
-            textPages.push(text)
+    // デバッグ用：最初の200文字を表示
+    console.log(`📖 内容（最初の200文字）:`)
+    console.log(extractedText.substring(0, 200))
 
-            // 信頼度の計算（全ページの平均）
-            if (pageResponse.fullTextAnnotation.pages) {
-              pageResponse.fullTextAnnotation.pages.forEach(page => {
-                if (page.confidence) {
-                  totalConfidence += page.confidence
-                  pageCount++
-                }
-              })
-            }
-          }
-        }
-      }
-    }
-
-    const averageConfidence = pageCount > 0 ? totalConfidence / pageCount : 0.9
-
-    console.log(`✅ Vision API OCR 完了`)
-    console.log(`📄 抽出ページ数: ${textPages.length}`)
-    console.log(`📊 平均信頼度: ${(averageConfidence * 100).toFixed(1)}%`)
-    console.log(`📝 総文字数: ${textPages.join('').length}`)
-
-    // デバッグ用：最初のページの一部を表示
-    if (textPages.length > 0) {
-      console.log(`📖 1ページ目の内容（最初の200文字）:`)
-      console.log(textPages[0].substring(0, 200))
-    }
-
+    // 単一ページとして扱う（Claudeは全ページを1つのテキストとして返す）
     return {
-      text: textPages,
-      confidence: averageConfidence,
+      text: [extractedText],
+      confidence: 0.95, // Claudeの精度は高いため固定値
     }
   } catch (error) {
-    console.error('❌ Google Vision API エラー:', error)
+    console.error('❌ Claude API エラー:', error)
     throw new Error(
-      `Vision API による OCR に失敗しました: ${error instanceof Error ? error.message : String(error)}`
+      `Claude API による OCR に失敗しました: ${error instanceof Error ? error.message : String(error)}`
     )
   }
 }

@@ -1,105 +1,218 @@
-<a href="https://demo-nextjs-with-supabase.vercel.app/">
-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
-</a>
+# 財務分析システム (Financial Analysis System)
 
-<p align="center">
- The fastest way to build apps with Next.js and Supabase
-</p>
+Next.jsとSupabaseを使用した企業財務分析プラットフォーム
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
-</p>
-<br/>
+## 概要
 
-## Features
+このシステムは、企業の財務データを管理・分析するためのWebアプリケーションです。予算実績比較分析、企業間比較分析、AI による分析コメント生成などの機能を提供します。
 
-- Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
-  - Pages Router
-  - Middleware
-  - Client
-  - Server
-  - It just works!
-- supabase-ssr. A package to configure Supabase Auth to use cookies
-- Password-based authentication block installed via the [Supabase UI Library](https://supabase.com/ui/docs/nextjs/password-based-auth)
-- Styling with [Tailwind CSS](https://tailwindcss.com)
-- Components with [shadcn/ui](https://ui.shadcn.com/)
-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
-  - Environment variables automatically assigned to Vercel project
+## 主な機能
 
-## Demo
+- **予算実績分析**: PDF から財務データを抽出し、予算と実績を比較分析
+- **企業間比較分析**: 複数企業の財務指標を比較・ベンチマーク
+- **AI 分析コメント生成**: Anthropic Claude による専門的な財務分析コメント生成
+- **PDF アップロード**: Google Cloud Vision API による OCR 処理
+- **時系列分析**: 複数年度にわたる財務データの推移分析
+- **勘定科目フォーマット管理**: 企業ごとの勘定科目マッピング
 
-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
+## 技術スタック
 
-## Deploy to Vercel
+- **フロントエンド**: Next.js 15 (App Router), React, TypeScript, Tailwind CSS
+- **UI コンポーネント**: shadcn/ui
+- **バックエンド**: Next.js API Routes, Supabase
+- **データベース**: Supabase (PostgreSQL)
+- **認証**: Supabase Auth
+- **ストレージ**: Supabase Storage
+- **AI**: Anthropic Claude API (Sonnet 4.5)
+- **OCR**: Google Cloud Vision API
 
-Vercel deployment will guide you through creating a Supabase account and project.
+## ローカル開発環境のセットアップ
 
-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
+### 前提条件
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This+starter+configures+Supabase+Auth+to+use+cookies%2C+making+the+user%27s+session+available+throughout+the+entire+Next.js+app+-+Client+Components%2C+Server+Components%2C+Route+Handlers%2C+Server+Actions+and+Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png)
+- Node.js 18.x 以降
+- npm または yarn
+- Docker Desktop (Supabase ローカル環境用)
+- Supabase CLI
 
-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
+### セットアップ手順
 
-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
+1. リポジトリをクローン
 
-## Clone and run locally
+```bash
+git clone <repository-url>
+cd financials
+```
 
-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
+2. 依存関係をインストール
 
-2. Create a Next.js app using the Supabase Starter template npx command
+```bash
+npm install
+```
 
-   ```bash
-   npx create-next-app --example with-supabase with-supabase-app
-   ```
+3. Supabase ローカル環境を起動
 
-   ```bash
-   yarn create next-app --example with-supabase with-supabase-app
-   ```
+```bash
+supabase start
+```
 
-   ```bash
-   pnpm create next-app --example with-supabase with-supabase-app
-   ```
+4. 環境変数を設定
 
-3. Use `cd` to change into the app's directory
+`.env.example` を `.env.local` にコピーして、必要な環境変数を設定してください。
 
-   ```bash
-   cd with-supabase-app
-   ```
+```bash
+cp .env.example .env.local
+```
 
-4. Rename `.env.example` to `.env.local` and update the following:
+必要な環境変数：
+- `SUPABASE_URL`: Supabase プロジェクト URL
+- `SUPABASE_ANON_KEY`: Supabase 匿名キー
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase サービスロールキー
+- `ANTHROPIC_API_KEY`: Anthropic Claude API キー
+- `GOOGLE_CLOUD_CREDENTIALS`: Google Cloud Vision API 認証情報 (JSON)
 
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=[INSERT SUPABASE PROJECT API ANON KEY]
-   ```
+5. マイグレーションを実行
 
-   Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` can be found in [your Supabase project's API settings](https://supabase.com/dashboard/project/_?showConnect=true)
+```bash
+supabase db reset
+```
 
-5. You can now run the Next.js local development server:
+6. 開発サーバーを起動
 
-   ```bash
-   npm run dev
-   ```
+```bash
+npm run dev
+```
 
-   The starter kit should now be running on [localhost:3000](http://localhost:3000/).
+アプリケーションは [http://localhost:3000](http://localhost:3000) で起動します。
 
-6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
+## プロダクション環境へのデプロイ
 
-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
+詳細なデプロイ手順は [`DEPLOYMENT_CHECKLIST.md`](../DEPLOYMENT_CHECKLIST.md) を参照してください。
 
-## Feedback and issues
+### クイックデプロイ手順
 
-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
+#### 1. Supabase プロジェクトの作成
 
-## More Supabase examples
+1. [Supabase Dashboard](https://app.supabase.com/) でプロジェクトを作成
+2. マイグレーションファイルを順番に実行 (`supabase/migrations/` 内のファイル)
+3. Storage バケット `financial-pdfs` を作成し、RLS ポリシーを設定 (`supabase/setup_storage_bucket.sql`)
 
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+#### 2. API キーの取得
+
+- **Anthropic Claude API**: https://console.anthropic.com/settings/keys
+- **Google Cloud Vision API**: https://console.cloud.google.com/apis/credentials
+
+#### 3. Vercel へのデプロイ
+
+```bash
+npm i -g vercel
+vercel login
+cd financials
+vercel
+```
+
+環境変数を Vercel Dashboard で設定後：
+
+```bash
+vercel --prod
+```
+
+## プロジェクト構造
+
+```
+financials/
+├── app/                          # Next.js App Router ページ
+│   ├── api/                      # API Routes
+│   ├── analysis/                 # 財務分析ページ
+│   ├── budget-vs-actual/         # 予算実績分析ページ
+│   ├── company-comparison/       # 企業間比較分析ページ
+│   └── companies/                # 企業管理ページ
+├── components/                   # React コンポーネント
+│   └── ui/                       # shadcn/ui コンポーネント
+├── lib/                          # ユーティリティ関数
+│   └── supabase/                 # Supabase クライアント
+├── supabase/                     # Supabase 設定
+│   ├── migrations/               # データベースマイグレーション
+│   └── setup_storage_bucket.sql  # Storage バケット設定
+└── public/                       # 静的ファイル
+```
+
+## データベーススキーマ
+
+主要なテーブル：
+
+- `companies`: 企業マスタ
+- `financial_periods`: 会計期間
+- `pl_data`: 損益計算書データ
+- `budget_data`: 予算データ
+- `industries`: 業種マスタ
+- `account_formats`: 勘定科目フォーマット
+
+詳細は `supabase/migrations/` 内のマイグレーションファイルを参照してください。
+
+## API エンドポイント
+
+- `POST /api/analyze-budget`: 予算実績分析 AI コメント生成
+- `POST /api/analyze-comparison`: 企業間比較分析 AI コメント生成
+- `POST /api/extract-financial-data`: PDF から財務データ抽出
+- `POST /api/budget-vs-actual/upload-pdf`: 予算実績分析用 PDF アップロード
+- `POST /api/company-comparison/quick-upload`: 企業間比較分析用 PDF アップロード
+
+## 環境変数
+
+### 必須
+
+```bash
+# Supabase
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+
+# Anthropic Claude API
+ANTHROPIC_API_KEY=
+NEXT_PUBLIC_ANTHROPIC_API_KEY=
+
+# Google Cloud Vision API
+GOOGLE_CLOUD_CREDENTIALS=
+```
+
+### オプション
+
+```bash
+# OpenAI API (現在未使用)
+OPENAI_API_KEY=
+NEXT_PUBLIC_OPENAI_API_KEY=
+```
+
+## ビルド
+
+```bash
+npm run build
+```
+
+## テスト
+
+```bash
+npm run test
+```
+
+## コントリビューション
+
+プルリクエストを歓迎します。大きな変更の場合は、まず issue を開いて変更内容を議論してください。
+
+## ライセンス
+
+[MIT](LICENSE)
+
+## サポート
+
+問題や質問がある場合は、GitHub Issues でお知らせください。
+
+## 関連ドキュメント
+
+- [デプロイチェックリスト](../DEPLOYMENT_CHECKLIST.md)
+- [Next.js ドキュメント](https://nextjs.org/docs)
+- [Supabase ドキュメント](https://supabase.com/docs)
+- [Anthropic Claude API ドキュメント](https://docs.anthropic.com/)

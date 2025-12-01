@@ -6,6 +6,7 @@ import { extractTextWithGoogleVision } from '@/lib/utils/google-vision-ocr'
 
 export async function POST(request: NextRequest) {
   try {
+    // FormDataからファイルを取得
     const formData = await request.formData()
     const file = formData.get('file') as File
 
@@ -16,9 +17,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('🔧 Vision API OCR リクエスト受信:', file.name, file.size)
+    console.log('🔧 Vision API OCR リクエスト受信:', file.name, file.size, 'bytes')
 
-    // ファイルをBufferに変換
+    // FileからBufferに変換
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 

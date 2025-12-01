@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Fragment } from 'react'
+import { useState, useEffect, Fragment, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -83,7 +83,7 @@ interface CompanyRanking {
   total_companies: number
 }
 
-export default function CompanyComparisonPage() {
+function CompanyComparisonContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [companies, setCompanies] = useState<Company[]>([])
@@ -1254,5 +1254,20 @@ export default function CompanyComparisonPage() {
           )}
       </div>
     </div>
+  )
+}
+
+export default function CompanyComparisonPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 mx-auto text-gray-400 mb-4 animate-spin" />
+          <p className="text-gray-600">読み込み中...</p>
+        </div>
+      </div>
+    }>
+      <CompanyComparisonContent />
+    </Suspense>
   )
 }

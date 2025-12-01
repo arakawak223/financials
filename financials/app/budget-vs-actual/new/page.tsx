@@ -14,9 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ArrowLeft, Save, Calculator } from 'lucide-react'
+import { ArrowLeft, Save, Calculator, Upload, Edit } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/types/database'
+import { UnifiedPdfUpload } from '@/components/unified-pdf-upload'
+import type { ExtractedFinancialData } from '@/components/unified-pdf-upload'
 
 type Company = Database['public']['Tables']['companies']['Row']
 type FinancialPeriod = Database['public']['Tables']['financial_periods']['Row']
@@ -58,6 +60,9 @@ export default function NewBudgetPage() {
   const router = useRouter()
   const [companies, setCompanies] = useState<Company[]>([])
   const [saving, setSaving] = useState(false)
+  const [inputMode, setInputMode] = useState<'pdf' | 'manual'>('pdf')
+  const [budgetPdfData, setBudgetPdfData] = useState<ExtractedFinancialData | null>(null)
+  const [actualPdfData, setActualPdfData] = useState<ExtractedFinancialData | null>(null)
   const [formData, setFormData] = useState<BudgetFormData>({
     companyId: '',
     fiscalYear: new Date().getFullYear(),
@@ -259,6 +264,36 @@ export default function NewBudgetPage() {
       <div className="flex-1 bg-gray-50">
         <div className="max-w-7xl mx-auto py-8 px-6">
           <div className="space-y-6">
+            {/* 入力モード選択 */}
+            <Card className="p-4">
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium text-gray-700">データ入力方法:</span>
+                <div className="flex gap-2">
+                  <Button
+                    variant={inputMode === 'pdf' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setInputMode('pdf')}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    PDF読込
+                  </Button>
+                  <Button
+                    variant={inputMode === 'manual' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setInputMode('manual')}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    手動入力
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {inputMode === 'pdf'
+                  ? 'PDFファイルから自動的に財務データを抽出します。抽出後、編集ボタンで修正できます。'
+                  : '手動でデータを入力します。'}
+              </p>
+            </Card>
+
             {/* 基本情報 */}
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-4">基本情報</h2>
@@ -364,8 +399,67 @@ export default function NewBudgetPage() {
               </div>
             </Card>
 
-            {/* 損益計算書 */}
-            <Card className="p-6">
+            {/* PDF読込モード */}
+            {inputMode === 'pdf' && (
+              <>
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* 予算PDFアップロード */}
+                  <UnifiedPdfUpload
+                    title="予算書PDFをアップロード"
+                    description={`${formData.fiscalYear}年度の予算書PDFを選択してください`}
+                    companyId={formData.companyId}
+                    fiscalYear={formData.fiscalYear}
+                    dataType="budget"
+                    uploadApiUrl="/api/budget-vs-actual/upload-pdf"
+                    saveApiUrl="/api/budget-vs-actual/save-extracted-data"
+                    onSuccess={(data) => {
+                      setBudgetPdfData(data.extractedData)
+                      // フォームデータに反映
+                      setFormData(prev => ({
+                        ...prev,
+                        netSales: data.extractedData.netSales?.toString() || '',
+                        costOfSales: data.extractedData.costOfSales?.toString() || '',
+                        grossProfit: data.extractedData.grossProfit?.toString() || '',
+                        sellingGeneralAdminExpenses: data.extractedData.sellingGeneralAdminExpenses?.toString() || '',
+                        operatingIncome: data.extractedData.operatingIncome?.toString() || '',
+                        ordinaryIncome: data.extractedData.ordinaryIncome?.toString() || '',
+                        netIncome: data.extractedData.netIncome?.toString() || '',
+                      }))
+                    }}
+                    allowEdit={true}
+                  />
+
+                  {/* 実績PDFアップロード */}
+                  <UnifiedPdfUpload
+                    title="実績（決算書）PDFをアップロード"
+                    description={`${formData.fiscalYear}年度の実績（決算書）PDFを選択してください`}
+                    companyId={formData.companyId}
+                    fiscalYear={formData.fiscalYear}
+                    dataType="actual"
+                    uploadApiUrl="/api/budget-vs-actual/upload-pdf"
+                    saveApiUrl="/api/budget-vs-actual/save-extracted-data"
+                    onSuccess={(data) => {
+                      setActualPdfData(data.extractedData)
+                    }}
+                    allowEdit={true}
+                  />
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                  <h4 className="font-medium text-blue-900 mb-2">PDF読込後の流れ</h4>
+                  <ol className="text-sm text-blue-800 space-y-1 list-decimal ml-4">
+                    <li>予算書と実績（決算書）のPDFをそれぞれアップロード</li>
+                    <li>自動的に財務データが抽出されます</li>
+                    <li>抽出データを確認し、必要に応じて「編集」ボタンで修正</li>
+                    <li>ページ下部の「保存」ボタンで登録完了</li>
+                  </ol>
+                </div>
+              </>
+            )}
+
+            {/* 手動入力モード - 損益計算書 */}
+            {inputMode === 'manual' && (
+              <Card className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold">損益計算書</h2>
                 <Button variant="outline" size="sm" onClick={autoCalculate}>
@@ -536,9 +630,11 @@ export default function NewBudgetPage() {
                 </div>
               </div>
             </Card>
+            )}
 
-            {/* キャッシュフロー */}
-            <Card className="p-6">
+            {/* 手動入力モード - キャッシュフロー */}
+            {inputMode === 'manual' && (
+              <Card className="p-6">
               <h2 className="text-xl font-semibold mb-4">キャッシュフロー</h2>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
@@ -615,6 +711,7 @@ export default function NewBudgetPage() {
                 </div>
               </div>
             </Card>
+            )}
 
             {/* アクション */}
             <div className="flex justify-end gap-4">

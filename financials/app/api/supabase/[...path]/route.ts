@@ -84,6 +84,14 @@ async function proxyToSupabase(
     // レスポンスボディを取得
     const responseBody = await response.text()
 
+    // 204 No Content の場合は、ボディなしでレスポンスを返す
+    if (response.status === 204) {
+      return new NextResponse(null, {
+        status: 204,
+        headers: responseHeaders,
+      })
+    }
+
     return new NextResponse(responseBody, {
       status: response.status,
       statusText: response.statusText,
