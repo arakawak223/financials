@@ -2,7 +2,7 @@ import { AuthButton } from "@/components/auth-button";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { hasEnvVars } from "@/lib/utils";
 import Link from "next/link";
-import { Plus, BarChart3, FileText, TrendingUp, Building2, ChevronDown } from "lucide-react";
+import { Plus, BarChart3, FileText, TrendingUp, Building2, ChevronDown, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -26,10 +26,13 @@ export default function Home() {
               決算分析
             </Link>
             <Link href="/budget-vs-actual" className="text-sm hover:underline">
-              予算実績分析
+              予算実績分析<span className="text-red-500 text-xs ml-1">（開発中）</span>
             </Link>
             <Link href="/company-comparison/new" className="text-sm hover:underline">
-              企業間比較
+              企業間比較<span className="text-red-500 text-xs ml-1">（開発中）</span>
+            </Link>
+            <Link href="/business-plan/new" className="text-sm hover:underline">
+              事業計画策定
             </Link>
             <Link href="/companies" className="text-sm hover:underline">
               企業管理
@@ -79,7 +82,7 @@ export default function Home() {
                   <Link href="/budget-vs-actual/new" className="flex items-center gap-3 cursor-pointer">
                     <TrendingUp className="h-5 w-5 text-primary" />
                     <div>
-                      <div className="font-semibold">予算実績分析</div>
+                      <div className="font-semibold">予算実績分析<span className="text-red-500 text-xs ml-1">（開発中）</span></div>
                       <div className="text-xs text-gray-600">予算と実績の差異分析</div>
                     </div>
                   </Link>
@@ -88,8 +91,17 @@ export default function Home() {
                   <Link href="/company-comparison/new" className="flex items-center gap-3 cursor-pointer">
                     <Building2 className="h-5 w-5 text-primary" />
                     <div>
-                      <div className="font-semibold">企業間比較分析</div>
+                      <div className="font-semibold">企業間比較分析<span className="text-red-500 text-xs ml-1">（開発中）</span></div>
                       <div className="text-xs text-gray-600">複数企業の財務指標を比較</div>
+                    </div>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/business-plan/new" className="flex items-center gap-3 cursor-pointer">
+                    <Target className="h-5 w-5 text-primary" />
+                    <div>
+                      <div className="font-semibold">事業計画策定</div>
+                      <div className="text-xs text-gray-600">財務三表の将来予測を作成</div>
                     </div>
                   </Link>
                 </DropdownMenuItem>
@@ -127,7 +139,7 @@ export default function Home() {
                     <div className="flex items-center gap-3">
                       <TrendingUp className="h-6 w-6 text-primary" />
                       <div>
-                        <h3 className="font-semibold">予算実績分析</h3>
+                        <h3 className="font-semibold">予算実績分析<span className="text-red-500 text-xs ml-1">（開発中）</span></h3>
                         <p className="text-sm text-gray-600">
                           予算と実績の差異分析と達成率モニタリング
                         </p>
@@ -140,7 +152,7 @@ export default function Home() {
                     <div className="flex items-center gap-3">
                       <Building2 className="h-6 w-6 text-primary" />
                       <div>
-                        <h3 className="font-semibold">企業間比較分析</h3>
+                        <h3 className="font-semibold">企業間比較分析<span className="text-red-500 text-xs ml-1">（開発中）</span></h3>
                         <p className="text-sm text-gray-600">
                           複数企業の財務指標を比較・ベンチマーク
                         </p>
@@ -154,24 +166,26 @@ export default function Home() {
             {/* 計画策定機能 */}
             <Card className="p-8 border-2 hover:border-primary transition-colors">
               <div className="mb-6">
-                <TrendingUp className="h-12 w-12 text-primary mb-3" />
+                <Target className="h-12 w-12 text-primary mb-3" />
                 <h2 className="text-2xl font-bold mb-2">計画策定機能</h2>
                 <p className="text-gray-600">
                   過去実績を基に将来の事業計画を策定・シミュレーション
                 </p>
               </div>
               <div className="space-y-4">
-                <div className="p-4 border rounded-lg bg-gray-50 opacity-60">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-6 w-6 text-gray-400" />
-                    <div>
-                      <h3 className="font-semibold text-gray-500">事業計画策定</h3>
-                      <p className="text-sm text-gray-500">
-                        5年間の財務予測とシナリオ分析（開発予定）
-                      </p>
+                <Link href="/business-plan/new">
+                  <div className="p-4 border rounded-lg hover:bg-accent transition-colors cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <Target className="h-6 w-6 text-primary" />
+                      <div>
+                        <h3 className="font-semibold">事業計画策定</h3>
+                        <p className="text-sm text-gray-600">
+                          過去決算データから財務三表の将来予測を作成
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               </div>
             </Card>
           </div>
