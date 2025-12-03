@@ -565,7 +565,7 @@ function CompanyComparisonContent() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
                 <Building2 className="w-8 h-8" />
-                企業間比較分析
+                企業間比較分析<span className="text-red-500 text-lg ml-2">（開発中）</span>
               </h1>
               <p className="text-gray-600 mt-1">
                 複数の企業の財務データを比較・分析します

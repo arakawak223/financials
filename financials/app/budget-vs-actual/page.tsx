@@ -315,7 +315,7 @@ export default function BudgetVsActualPage() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-3xl font-bold">予算実績分析</h1>
+                <h1 className="text-3xl font-bold">予算実績分析<span className="text-red-500 text-lg ml-2">（開発中）</span></h1>
                 <p className="text-sm text-gray-600 mt-1">
                   予算と実績の差異を分析し、達成状況をモニタリング
                 </p>

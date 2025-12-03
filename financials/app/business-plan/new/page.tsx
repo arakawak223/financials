@@ -29,6 +29,8 @@ import {
   ChevronUp,
   Plus,
   Trash2,
+  X,
+  Building2,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/types/database'
@@ -36,6 +38,16 @@ import type { HistoricalFinancialData, PlanResultPL, PlanResultBS, PlanResultCF 
 import { UnifiedPdfUpload, type ExtractedFinancialData } from '@/components/unified-pdf-upload'
 
 type Company = Database['public']['Tables']['companies']['Row']
+type Industry = Database['public']['Tables']['industries']['Row']
+
+// 新規企業登録フォーム
+interface NewCompanyForm {
+  name: string
+  industryId: string
+  companyCode: string
+  address: string
+  description: string
+}
 
 // ウィザードステップの定義
 type WizardStep = 'basic' | 'historical' | 'parameters' | 'results'
@@ -109,9 +121,21 @@ export default function NewBusinessPlanPage() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState<WizardStep>('basic')
   const [companies, setCompanies] = useState<Company[]>([])
+  const [industries, setIndustries] = useState<Industry[]>([])
   const [loading, setLoading] = useState(false)
   const [calculating, setCalculating] = useState(false)
   const [planId, setPlanId] = useState<string | null>(null)
+
+  // 新規企業登録用state
+  const [showNewCompanyModal, setShowNewCompanyModal] = useState(false)
+  const [newCompanyForm, setNewCompanyForm] = useState<NewCompanyForm>({
+    name: '',
+    industryId: '',
+    companyCode: '',
+    address: '',
+    description: '',
+  })
+  const [creatingCompany, setCreatingCompany] = useState(false)
 
   // 基本情報
   const [formData, setFormData] = useState<PlanFormData>({
@@ -162,6 +186,7 @@ export default function NewBusinessPlanPage() {
 
   useEffect(() => {
     loadCompanies()
+    loadIndustries()
   }, [])
 
   // 計画年度が変更されたらパラメータを初期化
@@ -200,6 +225,74 @@ export default function NewBusinessPlanPage() {
       setCompanies(data || [])
     } catch (error: any) {
       console.error('企業データ読み込みエラー:', error?.message || error)
+    }
+  }
+
+  const loadIndustries = async () => {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('industries')
+        .select('*')
+        .order('name')
+
+      if (error) {
+        console.error('Supabase error:', error.message, error.code, error.details)
+        throw error
+      }
+      setIndustries(data || [])
+    } catch (error: any) {
+      console.error('業種データ読み込みエラー:', error?.message || error)
+    }
+  }
+
+  // 新規企業登録
+  const handleCreateCompany = async () => {
+    if (!newCompanyForm.name.trim()) {
+      alert('企業名を入力してください')
+      return
+    }
+
+    setCreatingCompany(true)
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('companies')
+        .insert({
+          name: newCompanyForm.name.trim(),
+          industry_id: newCompanyForm.industryId || null,
+          company_code: newCompanyForm.companyCode || null,
+          address: newCompanyForm.address || null,
+          description: newCompanyForm.description || null,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Supabase error:', error.message, error.code, error.details)
+        throw error
+      }
+
+      // 企業リストを更新
+      await loadCompanies()
+
+      // 新しく作成した企業を選択
+      handleFormChange('companyId', data.id)
+
+      // モーダルを閉じてフォームをリセット
+      setShowNewCompanyModal(false)
+      setNewCompanyForm({
+        name: '',
+        industryId: '',
+        companyCode: '',
+        address: '',
+        description: '',
+      })
+    } catch (error: any) {
+      console.error('企業登録エラー:', error?.message || error)
+      alert('企業の登録に失敗しました')
+    } finally {
+      setCreatingCompany(false)
     }
   }
 
@@ -650,21 +743,31 @@ export default function NewBusinessPlanPage() {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="company">対象企業</Label>
-                    <Select
-                      value={formData.companyId}
-                      onValueChange={(value) => handleFormChange('companyId', value)}
-                    >
-                      <SelectTrigger id="company">
-                        <SelectValue placeholder="企業を選択" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {companies.map((company) => (
-                          <SelectItem key={company.id} value={company.id}>
-                            {company.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-2">
+                      <Select
+                        value={formData.companyId}
+                        onValueChange={(value) => handleFormChange('companyId', value)}
+                      >
+                        <SelectTrigger id="company" className="flex-1">
+                          <SelectValue placeholder="企業を選択" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companies.map((company) => (
+                            <SelectItem key={company.id} value={company.id}>
+                              {company.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowNewCompanyModal(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        新規登録
+                      </Button>
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="planName">計画名</Label>
@@ -1705,6 +1808,124 @@ export default function NewBusinessPlanPage() {
           )}
         </div>
       </div>
+
+      {/* 新規企業登録モーダル */}
+      {showNewCompanyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-lg mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                新規企業登録
+              </h2>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowNewCompanyModal(false)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="newCompanyName">企業名 *</Label>
+                <Input
+                  id="newCompanyName"
+                  value={newCompanyForm.name}
+                  onChange={(e) =>
+                    setNewCompanyForm((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  placeholder="例：株式会社〇〇"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="newCompanyIndustry">業種</Label>
+                <Select
+                  value={newCompanyForm.industryId}
+                  onValueChange={(value) =>
+                    setNewCompanyForm((prev) => ({ ...prev, industryId: value }))
+                  }
+                >
+                  <SelectTrigger id="newCompanyIndustry">
+                    <SelectValue placeholder="業種を選択（任意）" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {industries.map((industry) => (
+                      <SelectItem key={industry.id} value={industry.id}>
+                        {industry.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="newCompanyCode">企業コード</Label>
+                <Input
+                  id="newCompanyCode"
+                  value={newCompanyForm.companyCode}
+                  onChange={(e) =>
+                    setNewCompanyForm((prev) => ({ ...prev, companyCode: e.target.value }))
+                  }
+                  placeholder="例：1234（任意）"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="newCompanyAddress">住所</Label>
+                <Input
+                  id="newCompanyAddress"
+                  value={newCompanyForm.address}
+                  onChange={(e) =>
+                    setNewCompanyForm((prev) => ({ ...prev, address: e.target.value }))
+                  }
+                  placeholder="例：東京都渋谷区〇〇（任意）"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="newCompanyDescription">説明</Label>
+                <Textarea
+                  id="newCompanyDescription"
+                  value={newCompanyForm.description}
+                  onChange={(e) =>
+                    setNewCompanyForm((prev) => ({ ...prev, description: e.target.value }))
+                  }
+                  placeholder="企業の概要など（任意）"
+                  rows={2}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowNewCompanyModal(false)}
+              >
+                キャンセル
+              </Button>
+              <Button
+                onClick={handleCreateCompany}
+                disabled={creatingCompany || !newCompanyForm.name.trim()}
+              >
+                {creatingCompany ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    登録中...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    登録
+                  </>
+                )}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </main>
   )
 }

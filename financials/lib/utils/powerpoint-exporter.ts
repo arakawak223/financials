@@ -416,10 +416,16 @@ function formatValue(value: number | undefined, unitType: string, amountUnit?: A
   }
 
   if (unitType === '円') {
-    if (Math.abs(value) >= 100000000) {
+    // 企業規模に応じて百万円または千円単位を使用（万円は使わない）
+    if (Math.abs(value) >= 1000000000) {
+      // 10億以上は億円
       return `${(value / 100000000).toFixed(1)}億円`
-    } else if (Math.abs(value) >= 10000) {
-      return `${(value / 10000).toFixed(0)}万円`
+    } else if (Math.abs(value) >= 1000000) {
+      // 百万以上は百万円単位
+      return `${(value / 1000000).toFixed(0)}百万円`
+    } else if (Math.abs(value) >= 1000) {
+      // 千以上は千円単位
+      return `${(value / 1000).toFixed(0)}千円`
     }
     return `${value.toLocaleString()}円`
   }
